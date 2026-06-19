@@ -202,9 +202,17 @@ print(digest)
 
 To verify a **live** response: the `audit_trail` ships `filters_applied` and
 `fields_overridden` directly; pull `z_score` and `market_regime` from
-`math_diagnostics`, and `sentiment` from the response root. Rebuild the dict
-above, hash it, and compare to `audit_trail.protocol_hash`. If it matches →
-the pipeline ran with those exact corrections and nothing was tampered with.
+`math_diagnostics`, and `sentiment` from the response root. One precision
+detail — the seal hashes `z_score` rounded to **6 decimals**, while the
+response exposes it at full float precision, so round it first:
+
+```python
+payload["z_score"] = round(response["math_diagnostics"]["z_score"], 6)
+```
+
+Rebuild the dict above, hash it, and compare to `audit_trail.protocol_hash`.
+If it matches → the pipeline ran with those exact corrections and nothing was
+tampered with.
 
 ---
 
