@@ -7,6 +7,8 @@
 ![Anti-Hallucination](https://img.shields.io/badge/Anti--Hallucination-CTC--2026%20Certified-blueviolet?style=flat-square)
 ![Tests](https://img.shields.io/badge/tests-17%20passed-brightgreen?style=flat-square)
 
+![demo](demo.gif)
+
 ---
 
 ## The Problem
