@@ -1,4 +1,9 @@
-from typing import TypedDict
+from typing import Optional, TypedDict
+
+
+class Asset(TypedDict, total=False):
+    id: str
+    symbol: str
 
 
 class AuditTrail(TypedDict, total=False):
@@ -9,9 +14,6 @@ class AuditTrail(TypedDict, total=False):
     engine_version: str
     filters_applied: list[str]
     fields_overridden: list[str]
-    z_score: float
-    market_regime: str
-    sentiment: str
     sentiment_override: bool
 
 
@@ -20,36 +22,44 @@ class Confidence(TypedDict):
     label: str  # HIGH | MEDIUM | LOW
 
 
-class Analysis(TypedDict, total=False):
-    confidence: str
-    sentiment_score: float
-    sources_window: str
-
-
-class MathDiagnostics(TypedDict, total=False):
-    z_score: float
-    bollinger_bandwidth: float
-    data_quality: str  # OPTIMAL | PARTIAL | INSUFFICIENT
-    audit_trail: AuditTrail
-
-
 class SourceEntry(TypedDict, total=False):
     title: str
     url: str
     credibility: str  # Tier 1 | Tier 2 | Tier 3
 
 
-class InsightData(TypedDict, total=False):
-    id: str
-    name: str
-    symbol: str
-    sentiment: str  # bullish | bearish | neutral | very_bullish | very_bearish
+class MathDiagnostics(TypedDict, total=False):
+    z_score: float
+    z_score_threshold: float
+    bollinger_bandwidth: float
     market_regime: str
-    confidence: Confidence
-    summary: str
+    extreme_volatility_detected: bool
+    data_quality: str  # OPTIMAL | PARTIAL | INSUFFICIENT
+    data_quality_reason: list[str]
+    sentiment_override: bool
+    anomaly_details: Optional[str]
+    audit_trail: AuditTrail
+
+
+class Analysis(TypedDict, total=False):
     detailed_report: str
-    is_volatility_alert: bool
     sources_verified: list[SourceEntry]
+    sources_window: str
+
+
+class InsightData(TypedDict, total=False):
+    """Alpha-view payload returned by GET /market/insights/:id (?view=alpha).
+
+    Note the nesting: identity lives under `asset`, the regime and the seal
+    live under `math_diagnostics`, and the narrative lives under `analysis`.
+    """
+
+    engine_used: str  # radar | quant_plus
+    asset: Asset
+    summary: str
+    sentiment: str  # bullish | bearish | neutral
+    statistical_anomaly_detected: bool
+    confidence: Confidence
     math_diagnostics: MathDiagnostics
     analysis: Analysis
 

@@ -115,16 +115,19 @@ That's it. You'll see the analysis **and** the audit trail proving it was verifi
         CENTRO_BANDAS]            (price was at center, not
                                   near any band)
 
-  Fields overridden by Python (4):
+  Fields overridden by Python (7):
+    🔒  analysis.anomaly_details
     🔒  analysis.confidence
+    🔒  analysis.detailed_report
     🔒  analysis.sentiment_score
     🔒  confidence
+    🔒  is_volatility_alert
     🔒  sentiment
 
   ⚠  Sentiment was overridden by Z-Score rule
 
   Protocol hash (SHA-256):
-    0x8ac8aee2cc176fcfaefb6890b4c3e6af4dc642bc52e05d1ca235901929f31554
+    0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63
 
 ───────────────────────────────────────────────────────
   ✅ Math Override Certified (CTC-2026)
@@ -158,32 +161,50 @@ python agent.py batch bitcoin ethereum solana
 
 ## Verify the Hash Yourself
 
-The `protocol_hash` in every Radar response is a SHA-256 digest of the audit inputs. You can verify it independently with 5 lines of Python — no dependencies, no CryptoCapi account needed.
+The Radar `protocol_hash` is a SHA-256 digest of exactly eight fields: the
+pipeline identity (`algorithm_id`, `engine_version`), the math inputs that
+drove the overrides (`z_score`, `market_regime`, `sentiment`,
+`sentiment_override`), and the sorted lists of what the pipeline touched
+(`filters_applied`, `fields_overridden`). No wall-clock timestamp is hashed,
+so the same inputs always produce the same digest.
+
+Run this exact payload and you get this exact hash — no dependencies, no
+CryptoCapi account needed:
 
 ```python
 import hashlib, json
 
-# Copy these values directly from the API response audit_trail
 payload = {
     "algorithm_id": "Radar 4-Layer Anti-Hallucination Pipeline",
     "engine_version": "v2.1.0-radar",
-    "fields_overridden": ["analysis.confidence", "analysis.sentiment_score", "confidence", "sentiment"],
-    "filters_applied": ["LEY 7 volume", "band position CENTRO_BANDAS"],
+    "z_score": -0.6367,
     "market_regime": "RANGING_CHOP",
     "sentiment": "neutral",
     "sentiment_override": True,
-    "z_score": -0.6367
+    "filters_applied": ["LEY 7 volume", "band position CENTRO_BANDAS"],
+    "fields_overridden": [
+        "analysis.anomaly_details",
+        "analysis.confidence",
+        "analysis.detailed_report",
+        "analysis.sentiment_score",
+        "confidence",
+        "is_volatility_alert",
+        "sentiment",
+    ],
 }
 
 serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 digest = "0x" + hashlib.sha256(serialized.encode()).hexdigest()
 
 print(digest)
-# → 0x8ac8aee2cc176fcfaefb6890b4c3e6af4dc642bc52e05d1ca235901929f31554
-# This matches the protocol_hash in the API response exactly.
+# → 0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63
 ```
 
-If the hash matches → the pipeline ran with those exact corrections and nothing was tampered with.
+To verify a **live** response: the `audit_trail` ships `filters_applied` and
+`fields_overridden` directly; pull `z_score` and `market_regime` from
+`math_diagnostics`, and `sentiment` from the response root. Rebuild the dict
+above, hash it, and compare to `audit_trail.protocol_hash`. If it matches →
+the pipeline ran with those exact corrections and nothing was tampered with.
 
 ---
 
@@ -199,9 +220,10 @@ async def main():
     client = CryptoCapiClient(api_key="sk_live_...")
     data = await client.get_insight("bitcoin")
 
-    # Use the insight
-    print(data["sentiment"])        # neutral
-    print(data["market_regime"])    # RANGING_CHOP
+    # Use the insight (note the nesting — see cryptocapi/models.py)
+    print(data["sentiment"])                          # neutral
+    print(data["math_diagnostics"]["market_regime"])  # RANGING_CHOP
+    print(data["asset"]["symbol"])                     # BTC
 
     # Inspect the audit trail
     math = data.get("math_diagnostics", {})

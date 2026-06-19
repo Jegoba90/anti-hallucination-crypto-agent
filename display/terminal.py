@@ -42,7 +42,7 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     summary = data.get("summary", "")
     analysis = data.get("analysis", {})
     report = (analysis or {}).get("detailed_report", "")
-    is_alert = data.get("is_volatility_alert", False)
+    is_alert = (math or {}).get("extreme_volatility_detected", False)
     confidence = data.get("confidence")
 
     # ── Header ──────────────────────────────────────────────

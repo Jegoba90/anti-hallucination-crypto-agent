@@ -1,31 +1,32 @@
 {
   "status": "success",
+  "version": "1.0.0",
+  "timestamp": "2026-06-17T23:19:21.370718Z",
   "data": {
-    "id": "bitcoin",
-    "name": "Bitcoin",
-    "symbol": "BTC",
-    "sentiment": "neutral",
-    "market_regime": "RANGING_CHOP",
+    "engine_used": "radar",
+    "asset": {
+      "id": "bitcoin",
+      "symbol": "BTC"
+    },
     "summary": "Equilibrio técnico.",
-    "detailed_report": "El activo opera en zona de equilibrio técnico sin catalizador fundamental relevante en las últimas 24h. Las bandas de Bollinger muestran compresión consistente con una fase lateral consolidada.",
-    "is_volatility_alert": false,
+    "sentiment": "neutral",
+    "statistical_anomaly_detected": false,
     "confidence": {
       "score": 0.64,
       "label": "MEDIUM"
     },
-    "sources_verified": [
-      {
-        "title": "Bitcoin holds above key support as macro uncertainty persists",
-        "url": "https://example.com/article-1",
-        "credibility": "Tier 1"
-      }
-    ],
     "math_diagnostics": {
       "z_score": -0.6367,
+      "z_score_threshold": 3.0,
       "bollinger_bandwidth": 0.0423,
+      "market_regime": "RANGING_CHOP",
+      "extreme_volatility_detected": false,
       "data_quality": "OPTIMAL",
+      "data_quality_reason": [],
+      "sentiment_override": true,
+      "anomaly_details": null,
       "audit_trail": {
-        "protocol_hash": "0x8ac8aee2cc176fcfaefb6890b4c3e6af4dc642bc52e05d1ca235901929f31554",
+        "protocol_hash": "0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63",
         "calculated_at": "2026-06-17T23:19:21.370718Z",
         "seal_type": "process_seal",
         "algorithm_id": "Radar 4-Layer Anti-Hallucination Pipeline",
@@ -35,20 +36,26 @@
           "band position CENTRO_BANDAS"
         ],
         "fields_overridden": [
+          "analysis.anomaly_details",
           "analysis.confidence",
+          "analysis.detailed_report",
           "analysis.sentiment_score",
           "confidence",
+          "is_volatility_alert",
           "sentiment"
         ],
-        "z_score": -0.6367,
-        "market_regime": "RANGING_CHOP",
-        "sentiment": "neutral",
         "sentiment_override": true
       }
     },
     "analysis": {
-      "confidence": "MEDIUM",
-      "sentiment_score": 0.0,
+      "detailed_report": "El activo opera en zona de equilibrio técnico sin catalizador fundamental relevante en las últimas 24h. Las bandas de Bollinger muestran compresión consistente con una fase lateral consolidada.",
+      "sources_verified": [
+        {
+          "title": "Bitcoin holds above key support as macro uncertainty persists",
+          "url": "https://example.com/article-1",
+          "credibility": "Tier 1"
+        }
+      ],
       "sources_window": "24h"
     }
   }

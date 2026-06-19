@@ -1,5 +1,6 @@
 """Tests for the audit trail parser."""
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -117,3 +118,57 @@ class TestVerifyHashFormat:
         hex_part = hash_value[2:]
         assert len(hex_part) == 64
         assert all(c in "0123456789abcdef" for c in hex_part)
+
+
+class TestHashReproducibility:
+    """Reproduce the protocol_hash from the response exactly like a third party
+    would — pulling z_score/market_regime from math_diagnostics, sentiment from
+    the root, and filters/fields from the audit_trail. This guards the README's
+    'Verify the Hash Yourself' claim against silent drift.
+    """
+
+    def test_recomputed_hash_matches_fixture(self) -> None:
+        fixture = _load_fixture()
+        data = fixture["data"]
+        math = data["math_diagnostics"]
+        trail = math["audit_trail"]
+
+        payload = {
+            "algorithm_id": trail["algorithm_id"],
+            "engine_version": trail["engine_version"],
+            "z_score": math["z_score"],
+            "market_regime": math["market_regime"],
+            "sentiment": data["sentiment"],
+            "sentiment_override": trail["sentiment_override"],
+            "filters_applied": trail["filters_applied"],
+            "fields_overridden": trail["fields_overridden"],
+        }
+        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        recomputed = "0x" + hashlib.sha256(serialized.encode()).hexdigest()
+
+        assert recomputed == trail["protocol_hash"]
+
+    def test_readme_snippet_produces_documented_hash(self) -> None:
+        """The exact dict published in the README must produce the documented hash."""
+        payload = {
+            "algorithm_id": "Radar 4-Layer Anti-Hallucination Pipeline",
+            "engine_version": "v2.1.0-radar",
+            "z_score": -0.6367,
+            "market_regime": "RANGING_CHOP",
+            "sentiment": "neutral",
+            "sentiment_override": True,
+            "filters_applied": ["LEY 7 volume", "band position CENTRO_BANDAS"],
+            "fields_overridden": [
+                "analysis.anomaly_details",
+                "analysis.confidence",
+                "analysis.detailed_report",
+                "analysis.sentiment_score",
+                "confidence",
+                "is_volatility_alert",
+                "sentiment",
+            ],
+        }
+        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        digest = "0x" + hashlib.sha256(serialized.encode()).hexdigest()
+
+        assert digest == "0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63"
