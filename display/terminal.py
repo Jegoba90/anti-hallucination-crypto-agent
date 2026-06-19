@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from rich import box
@@ -159,6 +158,7 @@ def render_scan(results: list[ScanResult], strategy: str) -> None:
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📡 MARKET SCAN — strategy: [{COLORS['coin_name']}]{strategy}[/]")
+    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus — 100% Python, zero LLM, zero hallucination risk[/]")
     console.print(f"  {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
@@ -197,6 +197,7 @@ def render_batch(results: list[SignalResult]) -> None:
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📦 BATCH ANALYSIS — {len(results)} assets")
+    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus — 100% Python, zero LLM, zero hallucination risk[/]")
     console.print(f"  {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
 
