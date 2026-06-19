@@ -18,6 +18,7 @@ class CryptoCapiClient:
             r = await client.get(
                 f"{self._base_url}/market/insights/{coin_id}",
                 headers=self._headers,
+                params={"view": "alpha"},
             )
             r.raise_for_status()
             return r.json()["data"]
