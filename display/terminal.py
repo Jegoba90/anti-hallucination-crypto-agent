@@ -33,14 +33,16 @@ def _now_utc() -> str:
 
 
 def render_insight(data: InsightData, coin_id: str) -> None:
-    name = data.get("name", coin_id.upper())
-    symbol = data.get("symbol", "").upper()
+    asset = data.get("asset", {})
+    name = asset.get("id", coin_id).upper()
+    symbol = asset.get("symbol", "").upper()
     sentiment = data.get("sentiment", "neutral")
-    regime = data.get("market_regime", "—")
-    summary = data.get("summary", "")
-    report = data.get("detailed_report", "")
-    is_alert = data.get("is_volatility_alert", False)
     math = data.get("math_diagnostics")
+    regime = (math or {}).get("market_regime", "—")
+    summary = data.get("summary", "")
+    analysis = data.get("analysis", {})
+    report = (analysis or {}).get("detailed_report", "")
+    is_alert = data.get("is_volatility_alert", False)
     confidence = data.get("confidence")
 
     # ── Header ──────────────────────────────────────────────
