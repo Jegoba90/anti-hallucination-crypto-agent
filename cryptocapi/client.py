@@ -1,8 +1,38 @@
+import json
+
 import httpx
 
 from .models import InsightData, MarketSummary, PriceItem, ScanResult, SignalResult
 
 _DEFAULT_BASE_URL = "https://api.cryptocapi.com/v1"
+
+
+class DemoCoinRestricted(Exception):
+    """Raised when the public demo key is used for a non-whitelisted coin.
+
+    The demo key serves the full Alpha audit_trail for bitcoin & ethereum only;
+    any other asset returns 403 with a DEMO_COIN_RESTRICTED code. We surface that
+    as its own exception so the CLI can show a "get a free account" banner instead
+    of silently falling back to the free Pulse view.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.user_message = message
+
+
+def _demo_restriction_message(response: httpx.Response) -> str | None:
+    """Return the human message if a 403 carries the DEMO_COIN_RESTRICTED code."""
+    if response.status_code != 403:
+        return None
+    try:
+        raw = response.json().get("message")
+        inner = json.loads(raw) if isinstance(raw, str) else None
+    except (ValueError, AttributeError):
+        return None
+    if inner and inner.get("code") == "DEMO_COIN_RESTRICTED":
+        return inner.get("message")
+    return None
 
 
 class CryptoCapiClient:
@@ -20,11 +50,19 @@ class CryptoCapiClient:
         we transparently retry the public Pulse view so the caller still gets an
         insight — just without the audit_trail. The renderer detects the missing
         audit_trail and shows the upgrade banner, which is the whole free-tier hook.
+
+        One 403 is NOT a free-tier signal: the public demo key returns
+        DEMO_COIN_RESTRICTED for coins outside its bitcoin/ethereum whitelist. That
+        is raised as DemoCoinRestricted so the CLI can prompt the user to register
+        instead of misleadingly showing the generic Pulse banner.
         """
         url = f"{self._base_url}/market/insights/{coin_id}"
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.get(url, headers=self._headers, params={"view": "alpha"})
             if r.status_code in (401, 403):
+                restricted = _demo_restriction_message(r)
+                if restricted:
+                    raise DemoCoinRestricted(restricted)
                 r = await client.get(url, headers=self._headers, params={"view": "pulse"})
             r.raise_for_status()
             return r.json()["data"]

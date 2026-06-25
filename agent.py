@@ -8,8 +8,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient
-from display.terminal import console, render_batch, render_insight, render_scan
+from cryptocapi.client import CryptoCapiClient, DemoCoinRestricted
+from display.terminal import (
+    console,
+    render_batch,
+    render_demo_restricted,
+    render_insight,
+    render_scan,
+)
 
 app = typer.Typer(
     help=(
@@ -43,6 +49,8 @@ def coin(
             try:
                 data = await client.get_insight(coin_id)
                 render_insight(data, coin_id)
+            except DemoCoinRestricted as exc:
+                render_demo_restricted(exc.user_message)
             except Exception as exc:
                 console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
 

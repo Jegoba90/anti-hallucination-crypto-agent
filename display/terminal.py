@@ -144,6 +144,18 @@ def _render_audit(audit: AuditSummary) -> None:
     console.print()
 
 
+def render_demo_restricted(message: str) -> None:
+    console.print()
+    console.print(_DIVIDER, style=COLORS["divider"])
+    console.print(f"  🔒  [{COLORS['free_banner']}]DEMO KEY — bitcoin & ethereum only[/]")
+    console.print()
+    console.print(f"  [{COLORS['muted']}]{message}[/]")
+    console.print()
+    console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
+    console.print(_DIVIDER, style=COLORS["divider"])
+    console.print()
+
+
 def _render_pulse_view_banner() -> None:
     console.print(f"  [{COLORS['free_banner']}]⚠  PULSE VIEW (free / no key)[/]")
     console.print()
