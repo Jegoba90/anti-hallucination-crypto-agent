@@ -57,6 +57,8 @@ The LLM generates the language. The math engine generates the truth.
 
 ## Quick Start
 
+No signup required — the demo key is pre-configured for BTC and ETH.
+
 ```bash
 # 1. Clone
 git clone https://github.com/Jegoba90/anti-hallucination-crypto-agent.git
@@ -65,18 +67,17 @@ cd anti-hallucination-crypto-agent
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Get your free API key (14-day trial, no credit card)
-#    https://cryptocapi.com → Sign up → Activate trial
-
-# 4. Configure
+# 3. Configure (demo key is already set)
 cp .env.example .env
-# Edit .env and set: CRYPTOCAPI_API_KEY=sk_live_...
 
-# 5. Run
+# 4. Run
 python agent.py coin bitcoin
 ```
 
 That's it. You'll see the analysis **and** the audit trail proving it was verified.
+
+> **Want to analyze more coins?** The demo key is limited to BTC and ETH.
+> Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com)
 
 ---
 
