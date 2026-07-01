@@ -6,7 +6,7 @@
 █▄▄ █▀▄ ░█░ █▀▀ ░█░ █▄█ ░ █▀█ █▄█ ██▄ █░▀█ ░█░
 ```
 
-> A Python agent that analyzes crypto markets using AI — and **proves** it didn't make anything up.
+> A Python agent that analyzes crypto markets using AI, and **proves** it didn't make anything up.
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
@@ -21,9 +21,9 @@
 
 Every AI crypto tool sounds confident. None of them can prove they didn't invent the data.
 
-Ask an LLM to analyze Bitcoin and it will tell you the volume is "moderate", the movement is "significant", and the lower Bollinger Band is holding as support — even when the math says the price is sitting at dead center with a Z-Score of -0.6. That's not analysis. That's pattern-matching from training data dressed up as financial insight.
+Ask an LLM to analyze Bitcoin and it will tell you the volume is "moderate", the movement is "significant", and the lower Bollinger Band is holding as support, even when the math says the price is sitting at dead center with a Z-Score of -0.6. That's not analysis. That's pattern-matching from training data dressed up as financial insight.
 
-In traditional software, a wrong answer is a bug you can catch. In AI, a confident wrong answer looks **identical** to a confident right one. That's not a UX problem — it's a capital risk.
+In traditional software, a wrong answer is a bug you can catch. In AI, a confident wrong answer looks **identical** to a confident right one. That's not a UX problem: it's a capital risk.
 
 We built a different architecture. Before any insight reaches you, a deterministic Python math engine runs four sequential filters over the LLM's output, strips every claim that contradicts the actual numbers, and emits a **cryptographic receipt** proving exactly what was corrected.
 
@@ -63,7 +63,7 @@ The LLM generates the language. The math engine generates the truth.
 
 ## Quick Start
 
-Requires **Python 3.11+**. No signup required — the demo key is pre-configured for BTC and ETH.
+Requires **Python 3.11+**. No signup required: the demo key is pre-configured for BTC and ETH.
 
 ```bash
 # 1. Clone
@@ -83,8 +83,8 @@ python agent.py coin bitcoin
 That's it. You'll see the analysis **and** the audit trail proving it was verified.
 
 > **Want to analyze more coins?** The demo key is limited to BTC and ETH.
-> Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com) —
-> then edit `.env` and set `CRYPTOCAPI_API_KEY=sk_live_...`
+> Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com).
+> Then edit `.env` and set `CRYPTOCAPI_API_KEY=sk_live_...`
 
 > **On Windows** seeing a `UnicodeEncodeError`? Your terminal isn't using UTF-8.
 > Fix it for the session with `set PYTHONIOENCODING=utf-8` (cmd) or
@@ -157,23 +157,23 @@ That's it. You'll see the analysis **and** the audit trail proving it was verifi
 python agent.py coin bitcoin
 python agent.py coin ethereum
 
-# Watch mode — refresh every 30 minutes, flag sentiment changes
+# Watch mode: refresh every 30 minutes, flag sentiment changes
 python agent.py coin bitcoin --watch
 python agent.py coin bitcoin --watch --interval 15
 ```
 
-**Requires a free trial key — any coin + the Quant Pro engines:**
+**Requires a free trial key (any coin + the Quant Pro engines):**
 
 ```bash
 # Any other coin
 python agent.py coin solana
 
-# Market scan — rank all tracked assets by signal strength
+# Market scan: rank all tracked assets by signal strength
 python agent.py scan
 python agent.py scan --strategy aggressive --limit 5
 python agent.py scan --strategy conservative
 
-# Batch — analyze multiple coins in one request
+# Batch: analyze multiple coins in one request
 python agent.py batch bitcoin ethereum solana
 ```
 
@@ -190,7 +190,7 @@ drove the overrides (`z_score`, `market_regime`, `sentiment`,
 (`filters_applied`, `fields_overridden`). No wall-clock timestamp is hashed,
 so the same inputs always produce the same digest.
 
-Run this exact payload and you get this exact hash — no dependencies, no
+Run this exact payload and you get this exact hash, with no dependencies and no
 CryptoCapi account needed:
 
 ```python
@@ -225,7 +225,7 @@ print(digest)
 To verify a **live** response: the `audit_trail` ships `filters_applied` and
 `fields_overridden` directly; pull `z_score` and `market_regime` from
 `math_diagnostics`, and `sentiment` from the response root. One precision
-detail — the seal hashes `z_score` rounded to **6 decimals**, while the
+detail: the seal hashes `z_score` rounded to **6 decimals**, while the
 response exposes it at full float precision, so round it first:
 
 ```python
@@ -252,7 +252,7 @@ async def main():
     client = CryptoCapiClient(api_key="demo_btc_eth_public")
     data = await client.get_insight("bitcoin")
 
-    # Use the insight (note the nesting — see cryptocapi/models.py)
+    # Use the insight (note the nesting, see cryptocapi/models.py)
     print(data["sentiment"])                          # neutral
     print(data["math_diagnostics"]["market_regime"])  # RANGING_CHOP
     print(data["asset"]["symbol"])                     # BTC
@@ -276,7 +276,7 @@ asyncio.run(main())
 ```
 ├── agent.py               # CLI entry point (Typer)
 ├── cryptocapi/
-│   ├── client.py          # Async HTTP client — copy this into your project
+│   ├── client.py          # Async HTTP client: copy this into your project
 │   ├── models.py          # TypedDicts for full API response
 │   └── audit.py           # Audit trail parser + filter explanations
 ├── display/
@@ -301,13 +301,13 @@ pip install pytest
 pytest tests/ -v
 ```
 
-19 tests, no network calls required — all run against a local fixture.
+19 tests, no network calls required, all run against a local fixture.
 
 ---
 
 ## Powered by CryptoCapi
 
-This agent is built on [CryptoCapi](https://cryptocapi.com) — a crypto intelligence API designed specifically for machine consumption.
+This agent is built on [CryptoCapi](https://cryptocapi.com), a crypto intelligence API designed specifically for machine consumption.
 
 Unlike general-purpose LLM wrappers, CryptoCapi's Radar engine runs a deterministic Python math pipeline between the AI and every API response. Every numeric field is computed by Python, not the LLM. Every qualitative claim is cross-validated against the math. And every response ships with a SHA-256 audit trail you can verify independently.
 
@@ -323,4 +323,4 @@ This tool is for educational and informational purposes only. It does not consti
 
 ## License
 
-MIT — use it, fork it, copy the `cryptocapi/` package into your own project.
+MIT: use it, fork it, copy the `cryptocapi/` package into your own project.
