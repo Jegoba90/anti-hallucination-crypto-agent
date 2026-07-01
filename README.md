@@ -13,7 +13,7 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Anti-Hallucination](https://img.shields.io/badge/Anti--Hallucination-CTC--2026%20Certified-blueviolet?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-17%20passed-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-19%20passed-brightgreen?style=flat-square)
 
 ![demo](demo.gif)
 
@@ -234,7 +234,9 @@ import asyncio
 from cryptocapi import CryptoCapiClient, parse_audit_trail
 
 async def main():
-    client = CryptoCapiClient(api_key="sk_live_...")
+    # "demo_btc_eth_public" works out of the box for BTC/ETH; use your
+    # own sk_live_... key (14-day trial) to analyze any other coin.
+    client = CryptoCapiClient(api_key="demo_btc_eth_public")
     data = await client.get_insight("bitcoin")
 
     # Use the insight (note the nesting — see cryptocapi/models.py)
@@ -273,7 +275,7 @@ asyncio.run(main())
 │   ├── market_scanner.py  # Screener using market-scan endpoint
 │   └── batch_compare.py   # BTC vs ETH vs SOL side by side
 └── tests/
-    ├── test_audit_parser.py      # 17 tests, zero external dependencies
+    ├── test_audit_parser.py      # 19 tests, zero external dependencies
     └── fixtures/sample_response.json
 ```
 
@@ -286,7 +288,7 @@ pip install pytest
 pytest tests/ -v
 ```
 
-17 tests, no network calls required — all run against a local fixture.
+19 tests, no network calls required — all run against a local fixture.
 
 ---
 
