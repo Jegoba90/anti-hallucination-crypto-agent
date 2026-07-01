@@ -6,8 +6,6 @@
 █▄▄ █▀▄ ░█░ █▀▀ ░█░ █▄█ ░ █▀█ █▄█ ██▄ █░▀█ ░█░
 ```
 
-# 
-
 > A Python agent that analyzes crypto markets using AI — and **proves** it didn't make anything up.
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
