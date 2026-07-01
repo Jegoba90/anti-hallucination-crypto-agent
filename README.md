@@ -63,7 +63,7 @@ The LLM generates the language. The math engine generates the truth.
 
 ## Quick Start
 
-No signup required — the demo key is pre-configured for BTC and ETH.
+Requires **Python 3.11+**. No signup required — the demo key is pre-configured for BTC and ETH.
 
 ```bash
 # 1. Clone
@@ -74,7 +74,7 @@ cd anti-hallucination-crypto-agent
 pip install -r requirements.txt
 
 # 3. Configure (demo key is already set)
-cp .env.example .env
+cp .env.example .env          # Windows cmd: copy .env.example .env
 
 # 4. Run
 python agent.py coin bitcoin
@@ -83,7 +83,12 @@ python agent.py coin bitcoin
 That's it. You'll see the analysis **and** the audit trail proving it was verified.
 
 > **Want to analyze more coins?** The demo key is limited to BTC and ETH.
-> Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com)
+> Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com) —
+> then edit `.env` and set `CRYPTOCAPI_API_KEY=sk_live_...`
+
+> **On Windows** seeing a `UnicodeEncodeError`? Your terminal isn't using UTF-8.
+> Fix it for the session with `set PYTHONIOENCODING=utf-8` (cmd) or
+> `$env:PYTHONIOENCODING="utf-8"` (PowerShell), then run again.
 
 ---
 
