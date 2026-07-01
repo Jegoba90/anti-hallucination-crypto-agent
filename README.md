@@ -6,7 +6,7 @@
 █▄▄ █▀▄ ░█░ █▀▀ ░█░ █▄█ ░ █▀█ █▄█ ██▄ █░▀█ ░█░
 ```
 
-# anti-hallucination-crypto-agent
+# 
 
 > A Python agent that analyzes crypto markets using AI — and **proves** it didn't make anything up.
 
