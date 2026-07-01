@@ -127,13 +127,11 @@ That's it. You'll see the analysis **and** the audit trail proving it was verifi
         CENTRO_BANDAS]            (price was at center, not
                                   near any band)
 
-  Fields overridden by Python (7):
+  Fields overridden by Python (5):
     🔒  analysis.anomaly_details
     🔒  analysis.confidence
-    🔒  analysis.detailed_report
     🔒  analysis.sentiment_score
     🔒  confidence
-    🔒  is_volatility_alert
     🔒  sentiment
 
   ⚠  Sentiment was overridden by Z-Score rule
@@ -184,7 +182,7 @@ python agent.py batch bitcoin ethereum solana
 
 ## Verify the Hash Yourself
 
-The Radar `protocol_hash` is a SHA-256 digest of exactly eight fields: the
+The Radar `protocol_hash` is a SHA-256 digest of exactly eight fields (the count of `fields_overridden` varies per analysis — 5 base fields always present, more added when additional corrections fire): the
 pipeline identity (`algorithm_id`, `engine_version`), the math inputs that
 drove the overrides (`z_score`, `market_regime`, `sentiment`,
 `sentiment_override`), and the sorted lists of what the pipeline touched
