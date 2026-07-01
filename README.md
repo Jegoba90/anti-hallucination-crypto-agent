@@ -145,15 +145,23 @@ That's it. You'll see the analysis **and** the audit trail proving it was verifi
 
 ## Commands
 
+**Works with the pre-configured demo key (BTC & ETH):**
+
 ```bash
 # Analyze a single coin
 python agent.py coin bitcoin
 python agent.py coin ethereum
-python agent.py coin solana
 
 # Watch mode — refresh every 30 minutes, flag sentiment changes
 python agent.py coin bitcoin --watch
 python agent.py coin bitcoin --watch --interval 15
+```
+
+**Requires a free trial key — any coin + the Quant Pro engines:**
+
+```bash
+# Any other coin
+python agent.py coin solana
 
 # Market scan — rank all tracked assets by signal strength
 python agent.py scan
@@ -163,6 +171,8 @@ python agent.py scan --strategy conservative
 # Batch — analyze multiple coins in one request
 python agent.py batch bitcoin ethereum solana
 ```
+
+> Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com)
 
 ---
 
