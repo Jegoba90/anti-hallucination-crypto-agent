@@ -160,6 +160,9 @@ python agent.py coin ethereum
 # Watch mode: refresh every 30 minutes, flag sentiment changes
 python agent.py coin bitcoin --watch
 python agent.py coin bitcoin --watch --interval 15
+
+# Raw JSON: dump exactly what the API returned (pipe it to jq, verify the hash)
+python agent.py coin bitcoin --json
 ```
 
 **Requires a free trial key (any coin + the Quant Pro engines):**
@@ -222,9 +225,10 @@ print(digest)
 # → 0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63
 ```
 
-To verify a **live** response: the `audit_trail` ships `filters_applied` and
-`fields_overridden` directly; pull `z_score` and `market_regime` from
-`math_diagnostics`, and `sentiment` from the response root. One precision
+To verify a **live** response, dump the raw JSON with `python agent.py coin
+bitcoin --json` (or hit the API directly). The `audit_trail` ships
+`filters_applied` and `fields_overridden` directly; pull `z_score` and
+`market_regime` from `math_diagnostics`, and `sentiment` from the response root. One precision
 detail: the seal hashes `z_score` rounded to **6 decimals**, while the
 response exposes it at full float precision, so round it first:
 

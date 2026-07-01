@@ -1,6 +1,7 @@
 """Anti-Hallucination Crypto Agent — powered by CryptoCapi."""
 
 import asyncio
+import json
 import os
 
 import typer
@@ -40,11 +41,33 @@ def coin(
     interval: int = typer.Option(
         30, "--interval", "-i", help="Polling interval in minutes (requires --watch)"
     ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Print the raw API response as JSON (verify it yourself)"
+    ),
 ) -> None:
     """Analyze a single coin with full anti-hallucination audit trail."""
 
     async def _run() -> None:
         client = _get_client()
+
+        # Raw JSON mode: one-shot dump of exactly what the API returned, so a
+        # dev can inspect the audit_trail and reproduce the protocol_hash. Always
+        # emits valid JSON (ensure_ascii keeps it safe on non-UTF-8 terminals).
+        if json_output:
+            try:
+                data = await client.get_insight(coin_id)
+                print(json.dumps(data, indent=2, ensure_ascii=True))
+            except DemoCoinRestricted as exc:
+                print(
+                    json.dumps(
+                        {"error": "demo_coin_restricted", "message": exc.user_message},
+                        indent=2,
+                    )
+                )
+            except Exception as exc:
+                print(json.dumps({"error": str(exc)}, indent=2))
+            return
+
         while True:
             try:
                 data = await client.get_insight(coin_id)
