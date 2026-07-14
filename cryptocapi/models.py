@@ -28,9 +28,15 @@ class SourceEntry(TypedDict, total=False):
     credibility: str  # Tier 1 | Tier 2 | Tier 3
 
 
+class RegimeThresholds(TypedDict, total=False):
+    volatility_hard_limit: float
+    z_score_anomaly_boundary: float
+    daily_change_trend_boundary: float
+
+
 class MathDiagnostics(TypedDict, total=False):
     z_score: float
-    z_score_threshold: float
+    z_score_threshold: float  # dynamic, computed by the engine per response
     bollinger_bandwidth: float
     market_regime: str
     extreme_volatility_detected: bool
@@ -38,6 +44,7 @@ class MathDiagnostics(TypedDict, total=False):
     data_quality_reason: list[str]
     sentiment_override: bool
     anomaly_details: Optional[str]
+    regime_thresholds: RegimeThresholds
     audit_trail: AuditTrail
 
 

@@ -17,7 +17,7 @@
     },
     "math_diagnostics": {
       "z_score": -0.6367,
-      "z_score_threshold": 3.0,
+      "z_score_threshold": 3.5051,
       "bollinger_bandwidth": 0.0423,
       "market_regime": "RANGING_CHOP",
       "extreme_volatility_detected": false,
@@ -25,6 +25,11 @@
       "data_quality_reason": [],
       "sentiment_override": true,
       "anomaly_details": null,
+      "regime_thresholds": {
+        "volatility_hard_limit": 0.05,
+        "z_score_anomaly_boundary": 3.5051,
+        "daily_change_trend_boundary": 0.02
+      },
       "audit_trail": {
         "protocol_hash": "0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63",
         "calculated_at": "2026-06-17T23:19:21.370718Z",

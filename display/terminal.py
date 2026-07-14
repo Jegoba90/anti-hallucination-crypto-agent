@@ -74,7 +74,13 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     if math:
         z = math.get("z_score")
         if z is not None:
-            anomaly = "⚠️  ANOMALY DETECTED" if abs(z) >= 3.0 else "no anomaly"
+            # The engine already ships the verdict, computed against its dynamic
+            # z_score_threshold. The display must never re-derive it.
+            anomaly = (
+                "⚠️  ANOMALY DETECTED"
+                if data.get("statistical_anomaly_detected", False)
+                else "no anomaly"
+            )
             console.print(f"  🔺 Z-SCORE:         [{COLORS['muted']}]{z:.3f} ({anomaly})[/]")
 
     if is_alert:

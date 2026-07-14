@@ -339,7 +339,7 @@ pip install pytest
 pytest tests/ -v
 ```
 
-22 tests, no network calls and no API key required: they all run against a local
+No network calls and no API key required: every test runs against a local
 fixture. That includes the check that reproduces the `protocol_hash` documented
 above, so a change to the pipeline that broke the seal would fail the suite.
 
