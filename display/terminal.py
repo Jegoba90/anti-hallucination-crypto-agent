@@ -1,15 +1,17 @@
 from datetime import datetime, timezone
 
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 from rich.text import Text
 from rich import box
 
 from cryptocapi.audit import AuditSummary, parse_audit_trail
-from cryptocapi.models import InsightData, ScanResult, SignalResult
+from cryptocapi.models import Analysis, InsightData, ScanResult, SignalResult
 from .themes import (
     COLORS,
     CONFIDENCE_COLORS,
+    CREDIBILITY_COLORS,
     REGIME_ICONS,
     SENTIMENT_ICONS,
     SIGNAL_COLORS,
@@ -95,6 +97,8 @@ def render_insight(data: InsightData, coin_id: str) -> None:
         console.print(f"\n  [bold]SUMMARY:[/bold]")
         console.print(f"   {summary}")
 
+    _render_sources(analysis or {})
+
     # ── Audit Trail (PRO) or Free banner ─────────────────────
     audit_trail = math.get("audit_trail") if math else None
     audit = parse_audit_trail(audit_trail)  # type: ignore[arg-type]
@@ -107,6 +111,38 @@ def render_insight(data: InsightData, coin_id: str) -> None:
         return
 
     _render_audit(audit)
+
+
+def _render_sources(analysis: Analysis) -> None:
+    """Show the evidence behind the narrative.
+
+    The report makes claims about the news (a catalyst, a macro backdrop). The
+    engine ships the articles it read in `sources_verified`, so print them: an
+    unsourced claim the reader cannot trace is exactly what this tool exists to
+    expose, including when the source list comes back empty.
+    """
+    sources = analysis.get("sources_verified", [])
+    window = analysis.get("sources_window", "")
+
+    if not sources:
+        console.print(
+            f"\n  [{COLORS['warning']}]⚠  SOURCES VERIFIED (0): "
+            f"the narrative above is not anchored to any article[/]"
+        )
+        return
+
+    heading = f"  SOURCES VERIFIED ({len(sources)})"
+    if window:
+        heading += f", window {window}"
+    console.print(f"\n  [bold]{heading.strip()}:[/bold]")
+
+    for source in sources:
+        tier = source.get("credibility", "—")
+        color = CREDIBILITY_COLORS.get(tier, "white")
+        console.print(f"    [{color}][{escape(tier)}][/] {escape(source.get('title', ''))}")
+        url = source.get("url", "")
+        if url:
+            console.print(f"             [{COLORS['muted']}]{escape(url)}[/]")
 
 
 def _render_audit(audit: AuditSummary) -> None:

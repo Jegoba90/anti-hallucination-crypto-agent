@@ -38,6 +38,12 @@ CONFIDENCE_COLORS: dict[str, str] = {
     "LOW": "red",
 }
 
+CREDIBILITY_COLORS: dict[str, str] = {
+    "Tier 1": "green",
+    "Tier 2": "yellow",
+    "Tier 3": "red",
+}
+
 SIGNAL_COLORS: dict[str, str] = {
     "BUY": "green",
     "SELL": "red",
