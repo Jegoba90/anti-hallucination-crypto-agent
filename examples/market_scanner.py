@@ -15,13 +15,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient
+from cryptocapi.client import CryptoCapiClient, resolve_api_key
 from display.terminal import render_scan
 
 
 async def main(strategy: str, limit: int) -> None:
-    api_key = os.getenv("CRYPTOCAPI_API_KEY", "")
-    client = CryptoCapiClient(api_key=api_key)
+    client = CryptoCapiClient(api_key=resolve_api_key())
     results = await client.get_market_scan(strategy=strategy, limit=limit)
     render_scan(results, strategy)
 

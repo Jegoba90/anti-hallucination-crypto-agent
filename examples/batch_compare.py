@@ -14,15 +14,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient
+from cryptocapi.client import CryptoCapiClient, resolve_api_key
 from display.terminal import render_batch
 
 _DEFAULT_COINS = ["bitcoin", "ethereum", "solana"]
 
 
 async def main(symbols: list[str]) -> None:
-    api_key = os.getenv("CRYPTOCAPI_API_KEY", "")
-    client = CryptoCapiClient(api_key=api_key)
+    client = CryptoCapiClient(api_key=resolve_api_key())
     results = await client.get_batch_signals(symbols)
     render_batch(results)
 

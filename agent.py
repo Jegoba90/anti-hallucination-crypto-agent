@@ -3,13 +3,15 @@
 import asyncio
 import json
 import os
+from collections.abc import Coroutine
+from typing import Any
 
 import typer
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient, DemoCoinRestricted
+from cryptocapi.client import CryptoCapiClient, DemoCoinRestricted, resolve_api_key
 from display.terminal import (
     console,
     render_batch,
@@ -29,9 +31,16 @@ app = typer.Typer(
 
 
 def _get_client() -> CryptoCapiClient:
-    api_key = os.getenv("CRYPTOCAPI_API_KEY", "")
     base_url = os.getenv("CRYPTOCAPI_BASE_URL", "https://api.cryptocapi.com/v1")
-    return CryptoCapiClient(api_key=api_key, base_url=base_url)
+    return CryptoCapiClient(api_key=resolve_api_key(), base_url=base_url)
+
+
+def _run_async(coro: Coroutine[Any, Any, None]) -> None:
+    """Run a command coroutine, exiting quietly on Ctrl+C (used by --watch)."""
+    try:
+        asyncio.run(coro)
+    except KeyboardInterrupt:
+        console.print("\n  [dim]Stopped.[/dim]\n")
 
 
 @app.command()
@@ -85,7 +94,7 @@ def coin(
             )
             await asyncio.sleep(interval * 60)
 
-    asyncio.run(_run())
+    _run_async(_run())
 
 
 @app.command()
@@ -108,7 +117,7 @@ def scan(
         except Exception as exc:
             console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
 
-    asyncio.run(_run())
+    _run_async(_run())
 
 
 @app.command()
@@ -127,7 +136,7 @@ def batch(
         except Exception as exc:
             console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
 
-    asyncio.run(_run())
+    _run_async(_run())
 
 
 if __name__ == "__main__":

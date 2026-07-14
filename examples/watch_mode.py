@@ -14,13 +14,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient
+from cryptocapi.client import CryptoCapiClient, resolve_api_key
 from display.terminal import console, render_insight
 
 
 async def watch(coin_id: str, interval_minutes: int) -> None:
-    api_key = os.getenv("CRYPTOCAPI_API_KEY", "")
-    client = CryptoCapiClient(api_key=api_key)
+    client = CryptoCapiClient(api_key=resolve_api_key())
     last_sentiment: str | None = None
 
     while True:
@@ -47,4 +46,7 @@ async def watch(coin_id: str, interval_minutes: int) -> None:
 if __name__ == "__main__":
     coin = sys.argv[1] if len(sys.argv) > 1 else "bitcoin"
     interval = int(sys.argv[2]) if len(sys.argv) > 2 else 30
-    asyncio.run(watch(coin, interval))
+    try:
+        asyncio.run(watch(coin, interval))
+    except KeyboardInterrupt:
+        console.print("\n  [dim]Stopped.[/dim]\n")

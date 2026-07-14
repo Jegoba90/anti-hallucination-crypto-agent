@@ -1,10 +1,25 @@
 import json
+import os
 
 import httpx
 
 from .models import InsightData, MarketSummary, PriceItem, ScanResult, SignalResult
 
 _DEFAULT_BASE_URL = "https://api.cryptocapi.com/v1"
+
+DEMO_API_KEY = "demo_btc_eth_public"
+
+
+def resolve_api_key() -> str:
+    """Return the API key to use, falling back to the public demo key.
+
+    An *unset* CRYPTOCAPI_API_KEY means the user cloned and ran without copying
+    .env, so we hand them the demo key and the Quick Start just works. An
+    explicitly *empty* value is a deliberate "no key", which the API answers with
+    the free Pulse view.
+    """
+    raw = os.getenv("CRYPTOCAPI_API_KEY")
+    return DEMO_API_KEY if raw is None else raw
 
 
 class DemoCoinRestricted(Exception):

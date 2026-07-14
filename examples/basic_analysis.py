@@ -2,8 +2,10 @@
 
 Usage:
     pip install -r requirements.txt
-    cp .env.example .env          # add your CRYPTOCAPI_API_KEY
     python examples/basic_analysis.py
+
+Runs on the public demo key (bitcoin & ethereum) with no setup. To analyze any
+other coin, set CRYPTOCAPI_API_KEY in .env to your own sk_live_... key.
 """
 
 import asyncio
@@ -16,14 +18,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient
+from cryptocapi.client import CryptoCapiClient, resolve_api_key
 from cryptocapi.audit import parse_audit_trail
 from display.terminal import render_insight
 
 
 async def main() -> None:
-    api_key = os.getenv("CRYPTOCAPI_API_KEY", "")
-    client = CryptoCapiClient(api_key=api_key)
+    client = CryptoCapiClient(api_key=resolve_api_key())
 
     data = await client.get_insight("bitcoin")
     render_insight(data, "bitcoin")

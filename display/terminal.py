@@ -34,7 +34,7 @@ def _now_utc() -> str:
 
 def render_insight(data: InsightData, coin_id: str) -> None:
     asset = data.get("asset", {})
-    name = asset.get("id", coin_id).upper()
+    name = asset.get("id", coin_id).capitalize()
     symbol = asset.get("symbol", "").upper()
     sentiment = data.get("sentiment", "neutral")
     math = data.get("math_diagnostics")
