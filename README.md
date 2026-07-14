@@ -73,18 +73,17 @@ cd anti-hallucination-crypto-agent
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Configure (demo key is already set)
-cp .env.example .env          # Windows cmd: copy .env.example .env
-
-# 4. Run
+# 3. Run
 python agent.py coin bitcoin
 ```
 
-That's it. You'll see the analysis **and** the audit trail proving it was verified.
+That's it. No key to configure: the agent falls back to the public demo key on its
+own. You'll see the analysis **and** the audit trail proving it was verified.
 
 > **Want to analyze more coins?** The demo key is limited to BTC and ETH.
 > Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com).
-> Then edit `.env` and set `CRYPTOCAPI_API_KEY=sk_live_...`
+> Then `cp .env.example .env` (Windows cmd: `copy .env.example .env`) and set
+> `CRYPTOCAPI_API_KEY=sk_live_...` in it.
 
 > **On Windows** seeing a `UnicodeEncodeError`? Your terminal isn't using UTF-8.
 > Fix it for the session with `set PYTHONIOENCODING=utf-8` (cmd) or
@@ -106,8 +105,9 @@ That's it. You'll see the analysis **and** the audit trail proving it was verifi
   🔺 Z-SCORE:         -0.637 (no anomaly)
 
   ANALYSIS:
-   El activo opera en zona de equilibrio técnico sin
-   catalizador fundamental relevante en las últimas 24h.
+   El activo opera en zona de equilibrio técnico sin catalizador
+   fundamental relevante en las últimas 24h. Las bandas de Bollinger
+   muestran compresión consistente con una fase lateral consolidada.
 
 ───────────────────────────────────────────────────────
   🛡️  ANTI-HALLUCINATION AUDIT TRAIL
@@ -127,11 +127,13 @@ That's it. You'll see the analysis **and** the audit trail proving it was verifi
         CENTRO_BANDAS]            (price was at center, not
                                   near any band)
 
-  Fields overridden by Python (5):
+  Fields overridden by Python (7):
     🔒  analysis.anomaly_details
     🔒  analysis.confidence
+    🔒  analysis.detailed_report
     🔒  analysis.sentiment_score
     🔒  confidence
+    🔒  is_volatility_alert
     🔒  sentiment
 
   ⚠  Sentiment was overridden by Z-Score rule
@@ -159,6 +161,8 @@ python agent.py coin ethereum
 python agent.py coin bitcoin --watch
 python agent.py coin bitcoin --watch --interval 15
 
+# Raw API response, audit trail included: verify the hash yourself
+python agent.py coin bitcoin --json
 ```
 
 **Requires a free trial key (any coin + the Quant Pro engines):**
@@ -182,15 +186,23 @@ python agent.py batch bitcoin ethereum solana
 
 ## Verify the Hash Yourself
 
-The Radar `protocol_hash` is a SHA-256 digest of exactly eight fields (the count of `fields_overridden` varies per analysis — 5 base fields always present, more added when additional corrections fire): the
+The Radar `protocol_hash` is a SHA-256 digest of exactly eight fields: the
 pipeline identity (`algorithm_id`, `engine_version`), the math inputs that
 drove the overrides (`z_score`, `market_regime`, `sentiment`,
 `sentiment_override`), and the sorted lists of what the pipeline touched
 (`filters_applied`, `fields_overridden`). No wall-clock timestamp is hashed,
 so the same inputs always produce the same digest.
 
-Run this exact payload and you get this exact hash, with no dependencies and no
-CryptoCapi account needed:
+How many entries `fields_overridden` carries depends on what the pipeline had to
+correct. Five are always there (`analysis.anomaly_details`, `analysis.confidence`,
+`analysis.sentiment_score`, `confidence`, `is_volatility_alert`); the run above
+shows two more, because the lexical filters rewrote the narrative
+(`analysis.detailed_report`) and the Z-Score rule flipped the verdict
+(`sentiment`).
+
+This is the exact payload behind the output above, and the same fixture the test
+suite runs against. Run it and you get that exact hash, with no dependencies and
+no CryptoCapi account needed:
 
 ```python
 import hashlib, json
@@ -221,19 +233,45 @@ print(digest)
 # → 0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63
 ```
 
-To verify a **live** response, hit the API directly or use your own HTTP client.
-The `audit_trail` ships `filters_applied` and `fields_overridden` directly; pull `z_score` and
-`market_regime` from `math_diagnostics`, and `sentiment` from the response root. One precision
-detail: the seal hashes `z_score` rounded to **6 decimals**, while the
-response exposes it at full float precision, so round it first:
+### Now do it on a live response
 
-```python
-payload["z_score"] = round(response["math_diagnostics"]["z_score"], 6)
+Dump exactly what the API returned, audit trail included:
+
+```bash
+python agent.py coin bitcoin --json > btc.json
 ```
 
-Rebuild the dict above, hash it, and compare to `audit_trail.protocol_hash`.
-If it matches → the pipeline ran with those exact corrections and nothing was
-tampered with.
+Then rebuild the payload from that file and hash it. Note the one precision
+detail: the seal hashes `z_score` rounded to **6 decimals**, while the response
+exposes it at full float precision, so round it first.
+
+```python
+import hashlib, json
+
+response = json.load(open("btc.json"))
+math = response["math_diagnostics"]
+trail = math["audit_trail"]
+
+payload = {
+    "algorithm_id": trail["algorithm_id"],
+    "engine_version": trail["engine_version"],
+    "z_score": round(math["z_score"], 6),
+    "market_regime": math["market_regime"],
+    "sentiment": response["sentiment"],
+    "sentiment_override": trail["sentiment_override"],
+    "filters_applied": trail["filters_applied"],
+    "fields_overridden": trail["fields_overridden"],
+}
+
+serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+digest = "0x" + hashlib.sha256(serialized.encode()).hexdigest()
+
+print(digest == trail["protocol_hash"])
+# → True
+```
+
+If it prints `True`, the pipeline ran with those exact corrections and nothing was
+tampered with in transit.
 
 ---
 
@@ -287,7 +325,8 @@ asyncio.run(main())
 │   ├── market_scanner.py  # Screener using market-scan endpoint
 │   └── batch_compare.py   # BTC vs ETH vs SOL side by side
 └── tests/
-    ├── test_audit_parser.py      # 19 tests, zero external dependencies
+    ├── test_audit_parser.py        # Parser + hash reproducibility
+    ├── test_readme_consistency.py  # Pins this README to the fixture
     └── fixtures/sample_response.json
 ```
 
@@ -300,7 +339,9 @@ pip install pytest
 pytest tests/ -v
 ```
 
-19 tests, no network calls required, all run against a local fixture.
+22 tests, no network calls and no API key required: they all run against a local
+fixture. That includes the check that reproduces the `protocol_hash` documented
+above, so a change to the pipeline that broke the seal would fail the suite.
 
 ---
 
