@@ -26,18 +26,46 @@ def _load_fixture_audit_trail() -> dict:  # type: ignore[type-arg]
     return fixture["data"]["math_diagnostics"]["audit_trail"]
 
 
-class TestReadmeOutputBlock:
-    def test_fields_overridden_match_the_fixture(self) -> None:
-        block = re.search(
-            r"Fields overridden by Python \((\d+)\):\n((?:.*?🔒.*\n)+)", _load_readme()
-        )
-        assert block is not None, "README no longer has a 'Fields overridden by Python' block"
+def _block(heading: str, readme: str) -> tuple[int, str]:
+    """Return the (N) count and the body of a heading, up to the next blank line.
 
-        documented = re.findall(r"🔒\s+(\S+)", block.group(2))
+    Entries in the README wrap onto continuation lines, so the body is everything
+    until the block ends rather than only the lines carrying an icon.
+    """
+    match = re.search(rf"{heading} \((\d+)\):\n((?:.+\n)+)", readme)
+    assert match is not None, f"README no longer has a '{heading}' block"
+    return int(match.group(1)), match.group(2)
+
+
+class TestReadmeOutputBlock:
+    def test_owned_plus_corrected_match_the_fixture(self) -> None:
+        """The block splits the sealed list in two. Nothing may be lost or invented."""
+        readme = _load_readme()
+
+        owned_count, owned_body = _block("Fields Python owns, never the LLM", readme)
+        corrected_count, corrected_body = _block(
+            "Corrections applied to the LLM's output", readme
+        )
+
+        owned = re.findall(r"🔒\s+(\S+)", owned_body)
+        corrected = re.findall(r"✏️\s+(\S+)", corrected_body)
         expected = _load_fixture_audit_trail()["fields_overridden"]
 
-        assert documented == expected
-        assert int(block.group(1)) == len(expected), "the (N) count contradicts the list"
+        assert sorted(owned + corrected) == sorted(expected), (
+            "the two blocks must partition exactly what the seal hashes"
+        )
+        assert owned_count == len(owned), "the (N) count contradicts the list"
+        assert corrected_count == len(corrected), "the (N) count contradicts the list"
+
+    def test_a_field_is_never_both_a_guarantee_and_a_catch(self) -> None:
+        readme = _load_readme()
+
+        owned = re.findall(r"🔒\s+(\S+)", _block("Fields Python owns, never the LLM", readme)[1])
+        corrected = re.findall(
+            r"✏️\s+(\S+)", _block("Corrections applied to the LLM's output", readme)[1]
+        )
+
+        assert not set(owned) & set(corrected)
 
     def test_filters_fired_count_matches_the_fixture(self) -> None:
         match = re.search(r"Filters fired \((\d+)\):", _load_readme())

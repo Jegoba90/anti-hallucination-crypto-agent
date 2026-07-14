@@ -6,7 +6,7 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 
-from cryptocapi.audit import AuditSummary, parse_audit_trail
+from cryptocapi.audit import AuditSummary, explain_field, parse_audit_trail
 from cryptocapi.models import Analysis, InsightData, ScanResult, SignalResult
 from .themes import (
     COLORS,
@@ -156,23 +156,40 @@ def _render_audit(audit: AuditSummary) -> None:
 
     console.print()
     if audit.filters:
-        console.print(f"  Filters fired ({len(audit.filters)}):")
+        console.print(f"  [bold]Filters fired ({len(audit.filters)}):[/bold]")
         for name, explanation in audit.filters:
+            # escape(): a filter name like "band position CENTRO_BANDAS" is valid Rich
+            # markup, so an unescaped [name] gets parsed as a style tag and vanishes.
             console.print(
-                f"    ✂️  [{COLORS['filter_fired']}][{name}][/]"
-                f"  [{COLORS['muted']}]— {explanation}[/]"
+                f"    ✂️  [{COLORS['filter_fired']}]{escape(f'[{name}]')}[/]"
+                f"  [{COLORS['muted']}]{escape(explanation)}[/]"
             )
     else:
-        console.print(f"  [{COLORS['muted']}]No filters fired — LLM output was consistent with math[/]")
+        console.print(
+            f"  [{COLORS['muted']}]No filters fired: the LLM's output was consistent with the math[/]"
+        )
 
-    if audit.fields_overridden:
+    if audit.fields_corrected:
         console.print()
-        console.print(f"  Fields overridden by Python ({len(audit.fields_overridden)}):")
-        for field_name in audit.fields_overridden:
-            console.print(f"    🔒  [{COLORS['field_overridden']}]{field_name}[/]")
+        console.print(
+            f"  [bold]Corrections applied to the LLM's output ({len(audit.fields_corrected)}):[/bold]"
+        )
+        for field_name, reason in audit.fields_corrected:
+            console.print(f"    ✏️  [{COLORS['warning']}]{escape(field_name)}[/]")
+            console.print(f"        [{COLORS['muted']}]{escape(reason)}[/]")
 
-    if audit.sentiment_override:
-        console.print(f"\n  [{COLORS['warning']}]⚠  Sentiment was overridden by Z-Score rule[/]")
+    if audit.fields_owned:
+        console.print()
+        console.print(f"  [bold]Fields Python owns, never the LLM ({len(audit.fields_owned)}):[/bold]")
+        for field_name in audit.fields_owned:
+            console.print(f"    🔒  [{COLORS['field_overridden']}]{escape(field_name)}[/]")
+            explanation = explain_field(field_name)
+            if explanation:
+                console.print(f"        [{COLORS['muted']}]{escape(explanation)}[/]")
+        console.print(
+            f"\n  [{COLORS['muted']}]The math engine writes these on every response, "
+            f"whatever the LLM said.[/]"
+        )
 
     if audit.protocol_hash:
         console.print()

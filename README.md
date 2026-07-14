@@ -44,7 +44,7 @@ We built a different architecture. Before any insight reaches you, a determinist
 │  into the LLM prompt. Laws 0-9 restrict what AI can claim   │
 │                           ↓                                 │
 │  LAYER 3 — Numeric Override                                 │
-│  After the LLM responds, Python overwrites 9+ fields        │
+│  After the LLM responds, Python owns every numeric field    │
 │  The AI never has the last word on the numbers              │
 │                           ↓                                 │
 │  LAYER 4 — Lexical Filters (4 deterministic filters)        │
@@ -121,22 +121,34 @@ own. You'll see the analysis **and** the audit trail proving it was verified.
              (LLM is non-deterministic by design).
 
   Filters fired (2):
-    ✂️  [LEY 7 volume]          — Removed qualitative volume
-                                  claim (no actual volume data)
-    ✂️  [band position          — Removed lower-band claim
-        CENTRO_BANDAS]            (price was at center, not
-                                  near any band)
+    ✂️  [LEY 7 volume]  Removed a qualitative volume claim:
+                       the system has no volume data
+    ✂️  [band position CENTRO_BANDAS]  Removed a band-edge
+                       claim: the price was at CENTRO_BANDAS
 
-  Fields overridden by Python (7):
+  Corrections applied to the LLM's output (2):
+    ✏️  sentiment
+        Python overrode the LLM's verdict (Z-Score rule)
+    ✏️  analysis.detailed_report
+        the lexical filters rewrote the narrative
+
+  Fields Python owns, never the LLM (5):
     🔒  analysis.anomaly_details
+        the anomaly description. Written from the Z-Score or left
+        empty. The AI cannot invent one
     🔒  analysis.confidence
-    🔒  analysis.detailed_report
+        the HIGH / MEDIUM / LOW label, derived from the score, not
+        from the AI's wording
     🔒  analysis.sentiment_score
+        the numeric sentiment inside the report, computed from the
+        Z-Score
     🔒  confidence
+        how sure the call is. Derived from the math, never from how
+        assertive the AI sounded
     🔒  is_volatility_alert
-    🔒  sentiment
+        the volatility flag. Raised by the Bollinger bandwidth alone
 
-  ⚠  Sentiment was overridden by Z-Score rule
+  The math engine writes these on every response, whatever the LLM said.
 
   Protocol hash (SHA-256):
     0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63
@@ -193,12 +205,17 @@ drove the overrides (`z_score`, `market_regime`, `sentiment`,
 (`filters_applied`, `fields_overridden`). No wall-clock timestamp is hashed,
 so the same inputs always produce the same digest.
 
-How many entries `fields_overridden` carries depends on what the pipeline had to
-correct. Five are always there (`analysis.anomaly_details`, `analysis.confidence`,
-`analysis.sentiment_score`, `confidence`, `is_volatility_alert`); the run above
-shows two more, because the lexical filters rewrote the narrative
-(`analysis.detailed_report`) and the Z-Score rule flipped the verdict
-(`sentiment`).
+A word on `fields_overridden`, because the output above splits it in two and the
+seal does not. Five entries are always present (`analysis.anomaly_details`,
+`analysis.confidence`, `analysis.sentiment_score`, `confidence`,
+`is_volatility_alert`): the math engine writes those on every single response, so
+the LLM never gets a say. That is a **guarantee**, not a catch, and the CLI labels
+it as such. Two more entries are conditional, and those are the real catches:
+`sentiment` shows up only when the Z-Score rule overrode the LLM's verdict, and
+`analysis.detailed_report` only when a lexical filter cut text out of it. The run
+above has both, which is why it seals seven.
+
+The seal hashes the raw union of the seven, exactly as the API ships it.
 
 This is the exact payload behind the output above, and the same fixture the test
 suite runs against. Run it and you get that exact hash, with no dependencies and

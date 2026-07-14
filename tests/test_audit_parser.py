@@ -7,7 +7,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cryptocapi.audit import AuditSummary, explain_filter, explain_seal_type, parse_audit_trail
+from cryptocapi.audit import (
+    AuditSummary,
+    explain_filter,
+    explain_seal_type,
+    parse_audit_trail,
+    split_fields,
+)
 from cryptocapi.models import AuditTrail
 
 
@@ -63,6 +69,58 @@ class TestParseAuditTrail:
     def test_empty_dict_returns_non_pro_summary(self) -> None:
         summary = parse_audit_trail({})  # type: ignore[arg-type]
         assert summary.is_pro is False
+
+
+class TestSplitFields:
+    """A guarantee and a catch are different claims. The audit must not conflate them."""
+
+    _BASE = [
+        "analysis.anomaly_details",
+        "analysis.confidence",
+        "analysis.sentiment_score",
+        "confidence",
+        "is_volatility_alert",
+    ]
+
+    def test_quiet_response_has_no_corrections(self) -> None:
+        owned, corrected = split_fields(self._BASE, sentiment_override=False, filters_applied=[])
+
+        assert owned == self._BASE
+        assert corrected == []
+
+    def test_sentiment_is_a_correction_only_when_overridden(self) -> None:
+        fields = self._BASE + ["sentiment"]
+        owned, corrected = split_fields(fields, sentiment_override=True, filters_applied=[])
+
+        assert [name for name, _ in corrected] == ["sentiment"]
+        assert "sentiment" not in owned
+
+    def test_report_is_a_correction_only_when_filters_fired(self) -> None:
+        fields = self._BASE + ["analysis.detailed_report"]
+        owned, corrected = split_fields(
+            fields, sentiment_override=False, filters_applied=["LEY 7 volume"]
+        )
+
+        assert [name for name, _ in corrected] == ["analysis.detailed_report"]
+        assert "analysis.detailed_report" not in owned
+
+    def test_split_is_a_partition_of_the_sealed_list(self) -> None:
+        fixture = _load_fixture()
+        trail = fixture["data"]["math_diagnostics"]["audit_trail"]
+        summary = parse_audit_trail(trail)
+
+        assert sorted(summary.fields_owned + [n for n, _ in summary.fields_corrected]) == sorted(
+            trail["fields_overridden"]
+        )
+        assert not set(summary.fields_owned) & {n for n, _ in summary.fields_corrected}
+
+    def test_unknown_field_is_reported_as_owned_not_as_a_catch(self) -> None:
+        owned, corrected = split_fields(
+            ["some.future.field"], sentiment_override=False, filters_applied=[]
+        )
+
+        assert owned == ["some.future.field"]
+        assert corrected == []
 
 
 class TestExplainFilter:
