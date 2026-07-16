@@ -130,7 +130,7 @@ def render_insight(data: InsightData, coin_id: str) -> None:
 
     # ── Audit Trail (PRO) or Free banner ─────────────────────
     audit_trail = math.get("audit_trail") if math else None
-    audit = parse_audit_trail(audit_trail)  # type: ignore[arg-type]
+    audit = parse_audit_trail(audit_trail)
 
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])

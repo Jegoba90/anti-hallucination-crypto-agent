@@ -4,7 +4,6 @@ import asyncio
 import json
 import os
 from collections.abc import Coroutine
-from typing import Any
 
 import typer
 from dotenv import load_dotenv
@@ -41,7 +40,7 @@ def _get_client() -> CryptoCapiClient:
     return CryptoCapiClient(api_key=resolve_api_key(), base_url=base_url)
 
 
-def _run_async(coro: Coroutine[Any, Any, None]) -> None:
+def _run_async(coro: Coroutine[object, object, None]) -> None:
     """Run a command coroutine, exiting quietly on Ctrl+C (used by --watch)."""
     try:
         asyncio.run(coro)

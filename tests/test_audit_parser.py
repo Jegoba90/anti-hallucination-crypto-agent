@@ -17,7 +17,7 @@ from cryptocapi.audit import (
 from cryptocapi.models import AuditTrail
 
 
-def _load_fixture() -> dict:  # type: ignore[type-arg]
+def _load_fixture() -> dict:
     fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
     return json.loads(fixture_path.read_text())
 
@@ -67,7 +67,7 @@ class TestParseAuditTrail:
         assert summary.filters == []
 
     def test_empty_dict_returns_non_pro_summary(self) -> None:
-        summary = parse_audit_trail({})  # type: ignore[arg-type]
+        summary = parse_audit_trail({})
         assert summary.is_pro is False
 
 

@@ -1,5 +1,6 @@
 import json
 import os
+from typing import cast
 
 import httpx
 
@@ -52,14 +53,57 @@ class ProEngineRequired(Exception):
         self.user_message = message
 
 
+class UnexpectedResponse(Exception):
+    """Raised when the API's envelope is not the shape models.py describes.
+
+    The TypedDicts in models.py are a description of what CryptoCapi returns, and
+    this is the only place that checks the description still holds. A client that
+    declared InsightData and handed back whatever happened to arrive would be
+    making precisely the kind of unverified claim this project exists to catch,
+    only at the type level instead of in the prose.
+    """
+
+
+def _json_object(response: httpx.Response) -> dict[str, object] | None:
+    """Return the response body as an object tree, or None if it is not one.
+
+    `response.json()` is typed Any, and an Any that escapes this module reaches
+    the callers' declared return types unchecked. It is pinned to `object` here so
+    every read downstream has to narrow in the open.
+    """
+    try:
+        payload: object = response.json()
+    except ValueError:
+        # A gateway or proxy answering with HTML, not our envelope.
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return cast(dict[str, object], payload)
+
+
+def _envelope_data(response: httpx.Response) -> object:
+    """Return the `data` of the API envelope, deliberately still unnarrowed.
+
+    Handing back `object` rather than the target TypedDict forces each endpoint to
+    say out loud what shape it expects, instead of an Any quietly becoming an
+    InsightData nobody ever looked at.
+    """
+    payload = _json_object(response)
+    if payload is None:
+        raise UnexpectedResponse("the API returned a body that is not a JSON object")
+    if "data" not in payload:
+        raise UnexpectedResponse("the API response carries no `data` envelope")
+    return payload["data"]
+
+
 def _pro_plan_message(response: httpx.Response) -> str | None:
     """Return the API's own explanation when it rejects a Quant request."""
     if response.status_code not in (401, 403):
         return None
-    try:
-        message = response.json().get("message")
-    except (ValueError, AttributeError):
+    payload = _json_object(response)
+    if payload is None:
         return None
+    message = payload.get("message")
     return message if isinstance(message, str) and message else None
 
 
@@ -67,14 +111,24 @@ def _demo_restriction_message(response: httpx.Response) -> str | None:
     """Return the human message if a 403 carries the DEMO_COIN_RESTRICTED code."""
     if response.status_code != 403:
         return None
-    try:
-        raw = response.json().get("message")
-        inner = json.loads(raw) if isinstance(raw, str) else None
-    except (ValueError, AttributeError):
+    payload = _json_object(response)
+    if payload is None:
         return None
-    if inner and inner.get("code") == "DEMO_COIN_RESTRICTED":
-        return inner.get("message")
-    return None
+
+    # This endpoint nests a JSON document inside `message`, unlike the Quant ones.
+    raw = payload.get("message")
+    if not isinstance(raw, str):
+        return None
+    try:
+        inner: object = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(inner, dict):
+        return None
+    if inner.get("code") != "DEMO_COIN_RESTRICTED":
+        return None
+    message: object = inner.get("message")
+    return message if isinstance(message, str) else None
 
 
 class CryptoCapiClient:
@@ -107,7 +161,13 @@ class CryptoCapiClient:
                     raise DemoCoinRestricted(restricted)
                 r = await client.get(url, headers=self._headers, params={"view": "pulse"})
             r.raise_for_status()
-            return r.json()["data"]
+            data = _envelope_data(r)
+            if not isinstance(data, dict):
+                raise UnexpectedResponse("`data` is not an object; expected one insight")
+            # Every field of InsightData is optional (total=False) and every reader
+            # goes through .get() with a fallback, so an object is the whole shape
+            # promise there is to keep here.
+            return cast(InsightData, data)
 
     async def get_market_scan(
         self, strategy: str = "balanced", limit: int = 10
@@ -127,7 +187,10 @@ class CryptoCapiClient:
             if message:
                 raise ProEngineRequired(message)
             r.raise_for_status()
-            return r.json()["data"]
+            data = _envelope_data(r)
+            if not isinstance(data, list):
+                raise UnexpectedResponse("`data` is not a list; expected ranked assets")
+            return cast(list[ScanResult], data)
 
     async def get_batch_signals(self, symbols: list[str]) -> list[SignalResult]:
         """POST /quant/batch — signals for multiple assets in one request.
@@ -145,7 +208,10 @@ class CryptoCapiClient:
             if message:
                 raise ProEngineRequired(message)
             r.raise_for_status()
-            return r.json()["data"]
+            data = _envelope_data(r)
+            if not isinstance(data, list):
+                raise UnexpectedResponse("`data` is not a list; expected one signal per symbol")
+            return cast(list[SignalResult], data)
 
     async def get_prices(self, limit: int = 20) -> list[PriceItem]:
         """GET /market/prices/latest — public endpoint, no key required."""
@@ -155,11 +221,17 @@ class CryptoCapiClient:
                 params={"limit": limit},
             )
             r.raise_for_status()
-            return r.json()["data"]
+            data = _envelope_data(r)
+            if not isinstance(data, list):
+                raise UnexpectedResponse("`data` is not a list; expected prices")
+            return cast(list[PriceItem], data)
 
     async def get_market_summary(self) -> MarketSummary:
         """GET /market/market-summary — public endpoint, no key required."""
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.get(f"{self._base_url}/market/market-summary")
             r.raise_for_status()
-            return r.json()["data"]
+            data = _envelope_data(r)
+            if not isinstance(data, dict):
+                raise UnexpectedResponse("`data` is not an object; expected a market summary")
+            return cast(MarketSummary, data)

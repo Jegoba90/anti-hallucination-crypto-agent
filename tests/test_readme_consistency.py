@@ -20,7 +20,7 @@ def _load_readme() -> str:
     return (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
 
 
-def _load_fixture_audit_trail() -> dict:  # type: ignore[type-arg]
+def _load_fixture_audit_trail() -> dict:
     fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     return fixture["data"]["math_diagnostics"]["audit_trail"]

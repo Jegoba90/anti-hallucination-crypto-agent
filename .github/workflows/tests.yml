@@ -24,8 +24,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest
+          pip install pytest mypy
 
       # No network and no API key: every test runs against tests/fixtures.
       - name: Run tests
         run: pytest tests/ -v
+
+      # Runs on both interpreters of the matrix: see mypy.ini for why the config
+      # pins no python_version.
+      - name: Check types
+        run: mypy .
