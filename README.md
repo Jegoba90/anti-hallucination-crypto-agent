@@ -374,6 +374,8 @@ This agent is built on [CryptoCapi](https://cryptocapi.com), a crypto intelligen
 
 Unlike general-purpose LLM wrappers, CryptoCapi's Radar engine runs a deterministic Python math pipeline between the AI and every API response. Every numeric field is computed by Python, not the LLM. Every qualitative claim is cross-validated against the math. And every response ships with a SHA-256 audit trail you can verify independently.
 
+Want to look under the hood? [CryptoCapy-Portfolio](https://github.com/Jegoba90/CryptoCapy-Portfolio) documents the architecture behind the API: the three engines, the 4-layer pipeline, the seal semantics per engine ([SEAL.md](https://github.com/Jegoba90/CryptoCapy-Portfolio/blob/main/docs/SEAL.md)), and real sealed responses captured from production.
+
 **Get your free 14-day trial** (no credit card required): [cryptocapi.com](https://cryptocapi.com)
 
 ---
