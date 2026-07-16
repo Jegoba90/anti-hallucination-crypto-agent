@@ -1,10 +1,4 @@
-```
-▄▀█ █▄░█ ▀█▀ █ ░ █░█ ▄▀█ █░░ █░░ █░█ █▀▀ █ █▄░█ ▄▀█ ▀█▀ █ █▀█ █▄░█
-█▀█ █░▀█ ░█░ █ ░ █▀█ █▀█ █▄▄ █▄▄ █▄█ █▄▄ █ █░▀█ █▀█ ░█░ █ █▄█ █░▀█
-
-█▀▀ █▀█ █▄█ █▀█ ▀█▀ █▀█ ░ ▄▀█ █▀▀ █▀▀ █▄░█ ▀█▀
-█▄▄ █▀▄ ░█░ █▀▀ ░█░ █▄█ ░ █▀█ █▄█ ██▄ █░▀█ ░█░
-```
+![Anti-Hallucination Crypto Agent — AI crypto analysis that proves it didn't make anything up](assets/banner.png)
 
 > A Python agent that analyzes crypto markets using AI, and **proves** it didn't make anything up.
 
@@ -344,6 +338,7 @@ asyncio.run(main())
 └── tests/
     ├── test_audit_parser.py        # Parser + hash reproducibility
     ├── test_readme_consistency.py  # Pins this README to the fixture
+    ├── test_render_audit.py        # The audit block's claims survive the renderer
     ├── test_render_verdict.py      # The CLI shows the engine's verdict, never its own
     ├── test_render_sources.py      # The evidence behind the narrative reaches the screen
     └── fixtures/sample_response.json
