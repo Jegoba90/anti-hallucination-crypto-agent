@@ -372,6 +372,8 @@ above, so a change to the pipeline that broke the seal would fail the suite.
 
 This agent is built on [CryptoCapi](https://cryptocapi.com), a crypto intelligence API designed specifically for machine consumption.
 
+That machine-first design is concrete: the API publishes a live [`llms.txt`](https://www.cryptocapi.com/llms.txt) that maps every endpoint, its parameters and response shapes in the format AI agents read. This repo shows the *copy-a-typed-client* path; `llms.txt` is the *zero-code* one, an agent in Claude Code, Cursor or Copilot discovers the whole API on its own. Works anywhere: Claude Code · Cursor · GitHub Copilot · ChatGPT · LangChain · any REST client.
+
 Unlike general-purpose LLM wrappers, CryptoCapi's Radar engine runs a deterministic Python math pipeline between the AI and every API response. Every numeric field is computed by Python, not the LLM. Every qualitative claim is cross-validated against the math. And every response ships with a SHA-256 audit trail you can verify independently.
 
 Want to look under the hood? [CryptoCapi-Portfolio](https://github.com/Jegoba90/CryptoCapi-Portfolio) documents the architecture behind the API: the three engines, the 4-layer pipeline, the seal semantics per engine ([SEAL.md](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/docs/SEAL.md)), and real sealed responses captured from production.
