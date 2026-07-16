@@ -14,15 +14,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient, resolve_api_key
-from display.terminal import render_batch
+from cryptocapi.client import CryptoCapiClient, ProEngineRequired, resolve_api_key
+from display.terminal import render_batch, render_pro_required
 
 _DEFAULT_COINS = ["bitcoin", "ethereum", "solana"]
 
 
 async def main(symbols: list[str]) -> None:
     client = CryptoCapiClient(api_key=resolve_api_key())
-    results = await client.get_batch_signals(symbols)
+    try:
+        results = await client.get_batch_signals(symbols)
+    except ProEngineRequired as exc:
+        # The demo key does not reach Quant Plus. That is the expected answer
+        # here, so show the offer instead of dying on a traceback.
+        render_pro_required(exc.user_message)
+        return
     render_batch(results)
 
 

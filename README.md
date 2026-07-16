@@ -79,10 +79,6 @@ own. You'll see the analysis **and** the audit trail proving it was verified.
 > Then `cp .env.example .env` (Windows cmd: `copy .env.example .env`) and set
 > `CRYPTOCAPI_API_KEY=sk_live_...` in it.
 
-> **On Windows** seeing a `UnicodeEncodeError`? Your terminal isn't using UTF-8.
-> Fix it for the session with `set PYTHONIOENCODING=utf-8` (cmd) or
-> `$env:PYTHONIOENCODING="utf-8"` (PowerShell), then run again.
-
 ---
 
 ## Output
@@ -341,6 +337,8 @@ asyncio.run(main())
     ├── test_render_audit.py        # The audit block's claims survive the renderer
     ├── test_render_verdict.py      # The CLI shows the engine's verdict, never its own
     ├── test_render_sources.py      # The evidence behind the narrative reaches the screen
+    ├── test_pro_required.py        # The Quant plan gate reads as an offer, not an HTTP error
+    ├── test_terminal_encoding.py   # The output survives a terminal that isn't UTF-8
     └── fixtures/sample_response.json
 ```
 

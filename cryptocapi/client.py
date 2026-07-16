@@ -36,6 +36,33 @@ class DemoCoinRestricted(Exception):
         self.user_message = message
 
 
+class ProEngineRequired(Exception):
+    """Raised when the Quant engines turn the key in use away.
+
+    market-scan and batch run on Quant Plus, which the public demo key does not
+    cover, so the API answers 403 with its own plain explanation. Raising that as
+    its own exception lets the CLI show it next to the trial CTA, the way
+    DemoCoinRestricted already does for insights, instead of leaking a raw httpx
+    error (internal URL and a link to MDN's 403 page) at the exact moment the
+    reader got curious about the paid engines.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.user_message = message
+
+
+def _pro_plan_message(response: httpx.Response) -> str | None:
+    """Return the API's own explanation when it rejects a Quant request."""
+    if response.status_code not in (401, 403):
+        return None
+    try:
+        message = response.json().get("message")
+    except (ValueError, AttributeError):
+        return None
+    return message if isinstance(message, str) and message else None
+
+
 def _demo_restriction_message(response: httpx.Response) -> str | None:
     """Return the human message if a 403 carries the DEMO_COIN_RESTRICTED code."""
     if response.status_code != 403:
@@ -85,24 +112,38 @@ class CryptoCapiClient:
     async def get_market_scan(
         self, strategy: str = "balanced", limit: int = 10
     ) -> list[ScanResult]:
-        """GET /quant/market-scan — ranked list of assets by signal strength."""
+        """GET /quant/market-scan — ranked list of assets by signal strength.
+
+        Runs on Quant Plus, which the public demo key does not cover: a 401/403
+        here is the plan gate, not a bug, so it is raised as ProEngineRequired.
+        """
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.get(
                 f"{self._base_url}/quant/market-scan",
                 headers=self._headers,
                 params={"strategy": strategy, "limit": limit},
             )
+            message = _pro_plan_message(r)
+            if message:
+                raise ProEngineRequired(message)
             r.raise_for_status()
             return r.json()["data"]
 
     async def get_batch_signals(self, symbols: list[str]) -> list[SignalResult]:
-        """POST /quant/batch — signals for multiple assets in one request."""
+        """POST /quant/batch — signals for multiple assets in one request.
+
+        Same plan gate as get_market_scan: 401/403 means the key does not reach
+        Quant Plus, which the caller should surface as an offer, not an error.
+        """
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.post(
                 f"{self._base_url}/quant/batch",
                 headers=self._headers,
                 json={"symbols": symbols},
             )
+            message = _pro_plan_message(r)
+            if message:
+                raise ProEngineRequired(message)
             r.raise_for_status()
             return r.json()["data"]
 

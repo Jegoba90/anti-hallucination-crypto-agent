@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timezone
 
 from rich.console import Console
@@ -16,6 +17,34 @@ from .themes import (
     SENTIMENT_ICONS,
     SIGNAL_COLORS,
 )
+
+
+def _force_utf8_output() -> None:
+    """Make stdout able to carry the box drawing characters and emoji we print.
+
+    Every render starts with a 55-character `─` divider, so on a stdout that is
+    not UTF-8 (a Windows console under cp1252, or any redirected stream) the very
+    first line raises UnicodeEncodeError and `coin bitcoin` answers with a
+    traceback instead of the product. Repairing the stream here, where the output
+    is owned, means the CLI and every example inherit it and the reader never has
+    to export PYTHONIOENCODING to see a Quick Start that claims to just work.
+
+    `errors="replace"` is the floor: a terminal that still cannot represent a
+    glyph shows a placeholder rather than killing the run.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        # Absent under pytest's capture and any StringIO: nothing to repair there.
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            pass
+
+
+# Runs before Console() so Rich reads the repaired encoding, not the original.
+_force_utf8_output()
 
 console = Console()
 
@@ -209,6 +238,27 @@ def render_demo_restricted(message: str) -> None:
     console.print(f"  🔒  [{COLORS['free_banner']}]DEMO KEY — bitcoin & ethereum only[/]")
     console.print()
     console.print(f"  [{COLORS['muted']}]{message}[/]")
+    console.print()
+    console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
+    console.print(_DIVIDER, style=COLORS["divider"])
+    console.print()
+
+
+def render_pro_required(message: str) -> None:
+    """Show the Quant plan gate as the offer it is, not as an HTTP failure.
+
+    The API already explains itself ("Quantitative signals require a PRO plan
+    subscription."), so print that rather than a paraphrase, and put the trial
+    next to it: this fires exactly when the reader reached for a paid engine.
+    """
+    console.print()
+    console.print(_DIVIDER, style=COLORS["divider"])
+    console.print(f"  🔒  [{COLORS['free_banner']}]QUANT ENGINES: key required[/]")
+    console.print()
+    console.print(f"  [{COLORS['muted']}]{escape(message)}[/]")
+    console.print(
+        f"  [{COLORS['muted']}]The public demo key covers bitcoin and ethereum insights only.[/]"
+    )
     console.print()
     console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
     console.print(_DIVIDER, style=COLORS["divider"])

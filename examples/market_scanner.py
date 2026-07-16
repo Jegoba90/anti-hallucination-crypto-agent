@@ -15,13 +15,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient, resolve_api_key
-from display.terminal import render_scan
+from cryptocapi.client import CryptoCapiClient, ProEngineRequired, resolve_api_key
+from display.terminal import render_pro_required, render_scan
 
 
 async def main(strategy: str, limit: int) -> None:
     client = CryptoCapiClient(api_key=resolve_api_key())
-    results = await client.get_market_scan(strategy=strategy, limit=limit)
+    try:
+        results = await client.get_market_scan(strategy=strategy, limit=limit)
+    except ProEngineRequired as exc:
+        # The demo key does not reach Quant Plus. That is the expected answer
+        # here, so show the offer instead of dying on a traceback.
+        render_pro_required(exc.user_message)
+        return
     render_scan(results, strategy)
 
 

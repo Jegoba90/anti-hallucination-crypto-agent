@@ -11,12 +11,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cryptocapi.client import CryptoCapiClient, DemoCoinRestricted, resolve_api_key
+from cryptocapi.client import (
+    CryptoCapiClient,
+    DemoCoinRestricted,
+    ProEngineRequired,
+    resolve_api_key,
+)
 from display.terminal import (
     console,
     render_batch,
     render_demo_restricted,
     render_insight,
+    render_pro_required,
     render_scan,
 )
 
@@ -114,6 +120,8 @@ def scan(
         try:
             results = await client.get_market_scan(strategy=strategy, limit=limit)
             render_scan(results, strategy)
+        except ProEngineRequired as exc:
+            render_pro_required(exc.user_message)
         except Exception as exc:
             console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
 
@@ -133,6 +141,8 @@ def batch(
         try:
             results = await client.get_batch_signals(symbols)
             render_batch(results)
+        except ProEngineRequired as exc:
+            render_pro_required(exc.user_message)
         except Exception as exc:
             console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
 
