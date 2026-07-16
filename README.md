@@ -313,6 +313,17 @@ async def main():
 asyncio.run(main())
 ```
 
+The client raises three errors, all importable straight from `cryptocapi`:
+
+| Error | When it fires |
+|---|---|
+| `DemoCoinRestricted` | the demo key asked for a coin outside BTC and ETH |
+| `ProEngineRequired` | `get_market_scan` or `get_batch_signals` ran on a key that doesn't reach the Quant engines |
+| `UnexpectedResponse` | the API answered with something other than the envelope `models.py` describes |
+
+The first two carry the API's own wording in `.user_message`, so you can show it to
+a user as it is.
+
 ---
 
 ## Project Structure
