@@ -186,6 +186,83 @@ python agent.py batch bitcoin ethereum solana
 
 ---
 
+## Use Cases
+
+Every scenario below maps to a runnable script in `examples/`, so the fastest
+way to explore one is to open the file and run it.
+
+### Sanity-check a coin before acting on an AI signal
+
+Somewhere, a confident AI is calling Bitcoin "clearly bullish" right now. Ask
+this agent instead: you get the verdict plus the receipt. If the LLM's take
+contradicted the Z-Score, the override shows up in the audit trail, so you see
+whether the AI had to be corrected before the answer reached you.
+
+```bash
+python agent.py coin bitcoin
+# minimal version in code: python examples/basic_analysis.py
+```
+
+### Watch a position and catch sentiment flips
+
+Poll a coin every N minutes and get flagged the moment the sentiment changes.
+Each refresh ships its own audit trail, so when a flip happens you can tell
+whether the math forced it (`sentiment_override: true`) or the narrative moved
+on its own.
+
+```bash
+python agent.py coin bitcoin --watch --interval 15
+# script version: python examples/watch_mode.py bitcoin 15
+```
+
+### Screen the market before entering a trade
+
+Rank every tracked asset by signal strength under a risk profile and shortlist
+the top N. This path runs on the Quant engines, which are pure math: no LLM is
+involved anywhere in a scan.
+
+```bash
+python agent.py scan --strategy aggressive --limit 5
+# script version: python examples/market_scanner.py aggressive 5
+```
+
+### Compare assets side by side
+
+One request, several coins, the same deterministic yardstick. Useful for the
+"rotate ETH into SOL?" kind of question, where you want both candidates
+measured identically instead of narrated separately.
+
+```bash
+python agent.py batch bitcoin ethereum solana
+# script version: python examples/batch_compare.py bitcoin ethereum solana
+```
+
+### Archive analysis you can re-verify later
+
+Because every response carries its `protocol_hash`, a JSON dump is not just a
+log: it is evidence. Store the raw responses and you can prove, months later,
+that the analysis you acted on was never altered after the fact.
+
+```bash
+python agent.py coin bitcoin --json > btc.json
+```
+
+The next section shows exactly how to recompute the hash from that file.
+
+### Feed verified data to your own AI agent
+
+The inverse use case: your own LLM app needs market context, and you would
+rather not inherit someone else's hallucinations. Copy the `cryptocapi/`
+package, call `get_insight()`, and hand your model numbers computed by Python
+and text that already went through the 4-layer pipeline. See
+[Use It in Your Own Code](#use-it-in-your-own-code).
+
+> Single-coin analysis, watch mode and the JSON dump run on the pre-configured
+> demo key (BTC & ETH). Market scan and batch need a
+> [free 14-day trial key](https://cryptocapi.com).
+
+---
+
 ## Verify the Hash Yourself
 
 The Radar `protocol_hash` is a SHA-256 digest of exactly eight fields: the
