@@ -1,4 +1,4 @@
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 
 class Asset(TypedDict, total=False):
@@ -43,7 +43,7 @@ class MathDiagnostics(TypedDict, total=False):
     data_quality: str  # OPTIMAL | PARTIAL | INSUFFICIENT
     data_quality_reason: list[str]
     sentiment_override: bool
-    anomaly_details: Optional[str]
+    anomaly_details: str | None
     regime_thresholds: RegimeThresholds
     audit_trail: AuditTrail
 

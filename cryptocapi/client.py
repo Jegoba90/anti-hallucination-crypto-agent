@@ -7,6 +7,7 @@ import httpx
 from .models import InsightData, MarketSummary, PriceItem, ScanResult, SignalResult
 
 _DEFAULT_BASE_URL = "https://api.cryptocapi.com/v1"
+_TIMEOUT = 15.0
 
 DEMO_API_KEY = "demo_btc_eth_public"
 
@@ -153,7 +154,7 @@ class CryptoCapiClient:
         instead of misleadingly showing the generic Pulse banner.
         """
         url = f"{self._base_url}/market/insights/{coin_id}"
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.get(url, headers=self._headers, params={"view": "alpha"})
             if r.status_code in (401, 403):
                 restricted = _demo_restriction_message(r)
@@ -177,7 +178,7 @@ class CryptoCapiClient:
         Runs on Quant Plus, which the public demo key does not cover: a 401/403
         here is the plan gate, not a bug, so it is raised as ProEngineRequired.
         """
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.get(
                 f"{self._base_url}/quant/market-scan",
                 headers=self._headers,
@@ -198,7 +199,7 @@ class CryptoCapiClient:
         Same plan gate as get_market_scan: 401/403 means the key does not reach
         Quant Plus, which the caller should surface as an offer, not an error.
         """
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.post(
                 f"{self._base_url}/quant/batch",
                 headers=self._headers,
@@ -215,7 +216,7 @@ class CryptoCapiClient:
 
     async def get_prices(self, limit: int = 20) -> list[PriceItem]:
         """GET /market/prices/latest — public endpoint, no key required."""
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.get(
                 f"{self._base_url}/market/prices/latest",
                 params={"limit": limit},
@@ -228,7 +229,7 @@ class CryptoCapiClient:
 
     async def get_market_summary(self) -> MarketSummary:
         """GET /market/market-summary — public endpoint, no key required."""
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             r = await client.get(f"{self._base_url}/market/market-summary")
             r.raise_for_status()
             data = _envelope_data(r)

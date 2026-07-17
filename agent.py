@@ -8,8 +8,6 @@ from collections.abc import Coroutine
 import typer
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from cryptocapi.client import (
     CryptoCapiClient,
     DemoCoinRestricted,
@@ -24,6 +22,8 @@ from display.terminal import (
     render_pro_required,
     render_scan,
 )
+
+load_dotenv()
 
 app = typer.Typer(
     help=(
@@ -78,8 +78,10 @@ def coin(
                         indent=2,
                     )
                 )
+                raise typer.Exit(1)
             except Exception as exc:
                 print(json.dumps({"error": str(exc)}, indent=2))
+                raise typer.Exit(1)
             return
 
         while True:
@@ -88,8 +90,14 @@ def coin(
                 render_insight(data, coin_id)
             except DemoCoinRestricted as exc:
                 render_demo_restricted(exc.user_message)
+                # Watch mode polls through failures; a one-shot run reports
+                # them in its exit code so scripts can react.
+                if not watch:
+                    raise typer.Exit(1)
             except Exception as exc:
                 console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
+                if not watch:
+                    raise typer.Exit(1)
 
             if not watch:
                 break
@@ -121,8 +129,10 @@ def scan(
             render_scan(results, strategy)
         except ProEngineRequired as exc:
             render_pro_required(exc.user_message)
+            raise typer.Exit(1)
         except Exception as exc:
             console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
+            raise typer.Exit(1)
 
     _run_async(_run())
 
@@ -142,8 +152,10 @@ def batch(
             render_batch(results)
         except ProEngineRequired as exc:
             render_pro_required(exc.user_message)
+            raise typer.Exit(1)
         except Exception as exc:
             console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
+            raise typer.Exit(1)
 
     _run_async(_run())
 

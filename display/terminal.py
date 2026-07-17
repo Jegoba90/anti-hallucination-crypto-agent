@@ -115,15 +115,15 @@ def render_insight(data: InsightData, coin_id: str) -> None:
             console.print(f"  🔺 Z-SCORE:         [{COLORS['muted']}]{z:.3f} ({anomaly})[/]")
 
     if is_alert:
-        console.print(f"\n  [bold red]⚡ VOLATILITY ALERT[/bold red]")
+        console.print("\n  [bold red]⚡ VOLATILITY ALERT[/bold red]")
 
     # ── Summary / Report ─────────────────────────────────────
     if report:
-        console.print(f"\n  [bold]ANALYSIS:[/bold]")
+        console.print("\n  [bold]ANALYSIS:[/bold]")
         for line in report.strip().split("\n"):
             console.print(f"   {line}")
     elif summary:
-        console.print(f"\n  [bold]SUMMARY:[/bold]")
+        console.print("\n  [bold]SUMMARY:[/bold]")
         console.print(f"   {summary}")
 
     _render_sources(analysis or {})
@@ -175,7 +175,7 @@ def _render_sources(analysis: Analysis) -> None:
 
 
 def _render_audit(audit: AuditSummary) -> None:
-    console.print(f"  🛡️  [bold]ANTI-HALLUCINATION AUDIT TRAIL[/bold]")
+    console.print("  🛡️  [bold]ANTI-HALLUCINATION AUDIT TRAIL[/bold]")
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
     console.print(f"  Pipeline:  [{COLORS['muted']}]{audit.algorithm_id}[/]")
@@ -281,7 +281,7 @@ def render_scan(results: list[ScanResult], strategy: str) -> None:
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📡 MARKET SCAN — strategy: [{COLORS['coin_name']}]{strategy}[/]")
-    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus — 100% Python, zero LLM, zero hallucination risk[/]")
+    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
     console.print(f"  {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
@@ -320,7 +320,7 @@ def render_batch(results: list[SignalResult]) -> None:
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📦 BATCH ANALYSIS — {len(results)} assets")
-    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus — 100% Python, zero LLM, zero hallucination risk[/]")
+    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
     console.print(f"  {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
 
