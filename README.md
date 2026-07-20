@@ -29,7 +29,7 @@ We built a different architecture. Before any insight reaches you, a determinist
 
 Left to right, box by box:
 
-- **Market Data.** Price and volume for the asset. This is third-party input: in this system the raw feed is never the product, only the raw material.
+- **Market Data.** Price, volume and news for the asset. This is third-party input: in this system the raw feed is never the product, only the raw material.
 - **Layer 1 · Math Engine.** Python computes the Z-Score, Bollinger Bands and market regime *before* the LLM sees anything. This is the ground truth every later step defends.
 - **Layer 2 · Prompt Injection (10 Laws).** Those math values go into the prompt as non-negotiable constraints. Laws 0-9 bound what the model is even allowed to claim.
 - **LLM.** Writes the language, and only the language. It never gets the last word on a number, and it cannot invent one.
