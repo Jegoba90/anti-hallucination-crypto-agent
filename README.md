@@ -43,7 +43,9 @@ The LLM generates the language. The math engine generates the truth.
 
 ## Same question, two kinds of answer
 
-Anyone can rerun this. On 2026-07-20, in plain conversational mode with no live-data tools, we asked GPT-5.5, Gemini 3.1 Pro and the Radar agent the same question about Bitcoin: where is price relative to its Bollinger Bands, what is the short-term sentiment, and how confident are you? The raw replies and Radar's full JSON are saved in [`docs/comparisons/2026-07-20-btc/`](docs/comparisons/2026-07-20-btc).
+Anyone can rerun this. On 2026-07-20, in plain conversational mode with no live-data tools, we asked GPT-5.5, Gemini 3.1 Pro and the Radar agent the same four questions about Bitcoin: is trading volume high, moderate or low, where is price relative to its Bollinger Bands, what is the short-term sentiment, and how confident are you? The full prompt, the raw replies and Radar's JSON are in [`docs/comparisons/2026-07-20-btc/`](docs/comparisons/2026-07-20-btc).
+
+One of those four, volume, is left out of the table below on purpose: the Radar engine has no volume feed (that is the Quant Plus engine's job), so it is not a like-for-like axis. The models' volume answers are kept, untouched, in the raw replies.
 
 We are not claiming the raw models are wrong. We cannot prove that, and neither can they. The claim is narrower, and it is the whole point of the product: **one of these three answers you can check, the other two you cannot.**
 
