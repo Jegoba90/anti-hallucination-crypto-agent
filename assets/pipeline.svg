@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 376" width="1200" height="376" fill="#e8ebf2" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" role="img" aria-labelledby="ttl dsc">
+  <title id="ttl">CryptoCapi Radar — 4-Layer Anti-Hallucination Pipeline</title>
+  <desc id="dsc">Market data enters a deterministic pipeline. Layer 1 Math Engine and Layer 2 Prompt Injection set the rules before the LLM, which is caged and only writes prose. Layer 3 Numeric Override and Layer 4 Lexical Filters correct it afterward. The output is a verified insight sealed with a SHA-256 hash.</desc>
+
+  <defs>
+    <style>
+      .mono { font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; }
+      .t-hi { fill: #e8ebf2; }
+      .t-mid { fill: #9aa4b2; }
+    </style>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <filter id="blurL" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">
+      <path d="M26 0 L0 0 L0 26" fill="none" stroke="#9fb4ff" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+    <marker id="arw" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto-start-reverse">
+      <path d="M0,0 L6.5,3 L0,6 Z" fill="#7c8aa5"/>
+    </marker>
+  </defs>
+
+  <!-- ground -->
+  <rect x="0" y="0" width="1200" height="376" rx="20" fill="#0a0e17"/>
+  <rect x="0" y="0" width="1200" height="376" rx="20" fill="url(#grid)"/>
+  <ellipse cx="430" cy="215" rx="300" ry="170" fill="#a78bfa" opacity="0.07" filter="url(#blurL)"/>
+  <ellipse cx="770" cy="215" rx="300" ry="170" fill="#22d3ee" opacity="0.06" filter="url(#blurL)"/>
+  <ellipse cx="1090" cy="215" rx="150" ry="130" fill="#34d399" opacity="0.06" filter="url(#blurL)"/>
+  <rect x="0.75" y="0.75" width="1198.5" height="374.5" rx="19.25" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1.5"/>
+
+  <!-- brand row -->
+  <circle cx="36" cy="39" r="5" fill="#a78bfa"/>
+  <text x="49" y="44" font-size="16" font-weight="700" class="t-hi">CryptoCapi</text>
+  <text x="141" y="44" font-size="12" class="mono t-mid" fill-opacity="0.85">/ Radar engine</text>
+  <text x="1172" y="44" text-anchor="end" font-size="11.5" class="t-mid">AI crypto analysis that proves it didn&#8217;t make anything up</text>
+
+  <!-- flow arrows (behind cards) -->
+  <g stroke="#7c8aa5" stroke-width="1.7" marker-end="url(#arw)" fill="none">
+    <line x1="180" y1="210" x2="203" y2="210"/>
+    <line x1="357" y1="210" x2="376" y2="210"/>
+    <line x1="505" y1="210" x2="524" y2="210"/>
+    <line x1="653" y1="210" x2="672" y2="210"/>
+    <line x1="801" y1="210" x2="820" y2="210"/>
+    <line x1="975" y1="210" x2="1019" y2="210"/>
+  </g>
+
+  <!-- ================= PIPELINE FRAME ================= -->
+  <rect x="206" y="76" width="768" height="232" rx="18" fill="#0c1220" fill-opacity="0.55" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.5"/>
+  <circle cx="431" cy="100" r="3" fill="#a78bfa"/>
+  <text x="446" y="104" font-size="12.5" letter-spacing="2.2" class="mono" fill="#c7cffc">RADAR &#183; 4-LAYER ANTI-HALLUCINATION PIPELINE</text>
+
+  <!-- ===== INPUT (neutral, third-party data) ===== -->
+  <g>
+    <rect x="24" y="122" width="152" height="176" rx="15" fill="#0e1420" stroke="#64748b" stroke-opacity="0.55" stroke-width="1.5"/>
+    <rect x="63" y="136" width="74" height="18" rx="9" fill="#64748b" fill-opacity="0.15" stroke="#64748b" stroke-opacity="0.5"/>
+    <text x="100" y="148.5" text-anchor="middle" font-size="9.5" letter-spacing="1.6" class="mono" fill="#aab4c4">INPUT</text>
+    <text x="100" y="180" text-anchor="middle" font-size="15.5" font-weight="700" class="t-hi">Market Data</text>
+    <!-- mini candlesticks -->
+    <g stroke="#7c8aa5" stroke-width="1.4">
+      <line x1="76" y1="200" x2="76" y2="232"/><rect x="72.5" y="208" width="7" height="14" fill="#7c8aa5" fill-opacity="0.55" stroke="none"/>
+      <line x1="92" y1="204" x2="92" y2="228"/><rect x="88.5" y="210" width="7" height="11" fill="#7c8aa5" fill-opacity="0.55" stroke="none"/>
+      <line x1="108" y1="196" x2="108" y2="234"/><rect x="104.5" y="205" width="7" height="18" fill="#7c8aa5" fill-opacity="0.55" stroke="none"/>
+      <line x1="124" y1="202" x2="124" y2="229"/><rect x="120.5" y="209" width="7" height="13" fill="#7c8aa5" fill-opacity="0.55" stroke="none"/>
+    </g>
+    <text x="100" y="258" text-anchor="middle" font-size="10" class="mono t-mid">price &#183; volume</text>
+    <text x="100" y="273" text-anchor="middle" font-size="10" class="mono" fill="#64748b">asset &#183; live feed</text>
+  </g>
+
+  <!-- ===== L1 Math Engine (violet) ===== -->
+  <g>
+    <rect x="227" y="131" width="134" height="158" rx="16" fill="#a78bfa" opacity="0.28" filter="url(#soft)"/>
+    <rect x="231" y="135" width="126" height="150" rx="14" fill="#0f1626" stroke="#a78bfa" stroke-opacity="0.6" stroke-width="1.5"/>
+    <rect x="261" y="147" width="66" height="18" rx="9" fill="#a78bfa" fill-opacity="0.16" stroke="#a78bfa" stroke-opacity="0.5"/>
+    <text x="294" y="159.5" text-anchor="middle" font-size="9.5" letter-spacing="1.5" class="mono" fill="#a78bfa">LAYER 1</text>
+    <text x="294" y="193" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Math</text>
+    <text x="294" y="210" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Engine</text>
+    <text x="294" y="237" text-anchor="middle" font-size="9.5" class="mono t-mid">Z-Score &#183; Bollinger</text>
+    <text x="294" y="252" text-anchor="middle" font-size="9.5" class="mono" fill="#a78bfa" fill-opacity="0.92">truth before AI</text>
+  </g>
+
+  <!-- ===== L2 Prompt Injection (cyan) ===== -->
+  <g>
+    <rect x="375" y="131" width="134" height="158" rx="16" fill="#22d3ee" opacity="0.24" filter="url(#soft)"/>
+    <rect x="379" y="135" width="126" height="150" rx="14" fill="#0f1626" stroke="#22d3ee" stroke-opacity="0.6" stroke-width="1.5"/>
+    <rect x="409" y="147" width="66" height="18" rx="9" fill="#22d3ee" fill-opacity="0.14" stroke="#22d3ee" stroke-opacity="0.5"/>
+    <text x="442" y="159.5" text-anchor="middle" font-size="9.5" letter-spacing="1.5" class="mono" fill="#22d3ee">LAYER 2</text>
+    <text x="442" y="193" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Prompt</text>
+    <text x="442" y="210" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Injection</text>
+    <text x="442" y="237" text-anchor="middle" font-size="9.5" class="mono t-mid">10 Laws</text>
+    <text x="442" y="252" text-anchor="middle" font-size="9.5" class="mono" fill="#22d3ee" fill-opacity="0.92">math = hard limit</text>
+  </g>
+
+  <!-- ===== LLM (caged / neutral) ===== -->
+  <g>
+    <rect x="523" y="131" width="134" height="158" rx="16" fill="#64748b" opacity="0.16" filter="url(#soft)"/>
+    <rect x="527" y="135" width="126" height="150" rx="14" fill="#0b1018" stroke="#6b7280" stroke-opacity="0.7" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <!-- cage bars -->
+    <g stroke="#6b7280" stroke-opacity="0.22" stroke-width="2">
+      <line x1="556" y1="176" x2="556" y2="278"/>
+      <line x1="590" y1="176" x2="590" y2="278"/>
+      <line x1="624" y1="176" x2="624" y2="278"/>
+    </g>
+    <rect x="562" y="147" width="56" height="18" rx="9" fill="#6b7280" fill-opacity="0.18" stroke="#6b7280" stroke-opacity="0.5"/>
+    <text x="590" y="159.5" text-anchor="middle" font-size="9" letter-spacing="1.4" class="mono" fill="#aab2bf">MODEL</text>
+    <text x="590" y="207" text-anchor="middle" font-size="23" font-weight="800" fill="#cbd3df" letter-spacing="1">LLM</text>
+    <text x="590" y="237" text-anchor="middle" font-size="9.5" class="mono t-mid">writes prose</text>
+    <text x="590" y="252" text-anchor="middle" font-size="9.5" class="mono" fill="#6b7280">never numbers</text>
+  </g>
+
+  <!-- ===== L3 Numeric Override (cyan) ===== -->
+  <g>
+    <rect x="671" y="131" width="134" height="158" rx="16" fill="#22d3ee" opacity="0.24" filter="url(#soft)"/>
+    <rect x="675" y="135" width="126" height="150" rx="14" fill="#0f1626" stroke="#22d3ee" stroke-opacity="0.6" stroke-width="1.5"/>
+    <rect x="705" y="147" width="66" height="18" rx="9" fill="#22d3ee" fill-opacity="0.14" stroke="#22d3ee" stroke-opacity="0.5"/>
+    <text x="738" y="159.5" text-anchor="middle" font-size="9.5" letter-spacing="1.5" class="mono" fill="#22d3ee">LAYER 3</text>
+    <text x="738" y="193" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Numeric</text>
+    <text x="738" y="210" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Override</text>
+    <text x="738" y="237" text-anchor="middle" font-size="9.5" class="mono t-mid">Python owns</text>
+    <text x="738" y="252" text-anchor="middle" font-size="9.5" class="mono" fill="#22d3ee" fill-opacity="0.92">every number</text>
+  </g>
+
+  <!-- ===== L4 Lexical Filters (violet) ===== -->
+  <g>
+    <rect x="819" y="131" width="134" height="158" rx="16" fill="#a78bfa" opacity="0.28" filter="url(#soft)"/>
+    <rect x="823" y="135" width="126" height="150" rx="14" fill="#0f1626" stroke="#a78bfa" stroke-opacity="0.6" stroke-width="1.5"/>
+    <rect x="853" y="147" width="66" height="18" rx="9" fill="#a78bfa" fill-opacity="0.16" stroke="#a78bfa" stroke-opacity="0.5"/>
+    <text x="886" y="159.5" text-anchor="middle" font-size="9.5" letter-spacing="1.5" class="mono" fill="#a78bfa">LAYER 4</text>
+    <text x="886" y="193" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Lexical</text>
+    <text x="886" y="210" text-anchor="middle" font-size="15" font-weight="700" class="t-hi">Filters</text>
+    <text x="886" y="237" text-anchor="middle" font-size="9.5" class="mono t-mid">strips inflated</text>
+    <text x="886" y="252" text-anchor="middle" font-size="9.5" class="mono" fill="#a78bfa" fill-opacity="0.92">~300 patterns</text>
+  </g>
+
+  <!-- ===== OUTPUT (verified, green seal) ===== -->
+  <g>
+    <rect x="1020" y="122" width="152" height="176" rx="15" fill="#0e1a15" stroke="#34d399" stroke-opacity="0.55" stroke-width="1.5"/>
+    <rect x="1059" y="136" width="74" height="18" rx="9" fill="#34d399" fill-opacity="0.15" stroke="#34d399" stroke-opacity="0.5"/>
+    <text x="1096" y="148.5" text-anchor="middle" font-size="9.5" letter-spacing="1.6" class="mono" fill="#34d399">OUTPUT</text>
+    <text x="1096" y="178" text-anchor="middle" font-size="15.5" font-weight="700" class="t-hi">Verified</text>
+    <text x="1096" y="195" text-anchor="middle" font-size="15.5" font-weight="700" class="t-hi">Insight</text>
+    <text x="1096" y="220" text-anchor="middle" font-size="9.5" class="mono t-mid">grounded narrative</text>
+    <!-- seal chip -->
+    <rect x="1032" y="232" width="128" height="24" rx="12" fill="#34d399" fill-opacity="0.12" stroke="#34d399" stroke-opacity="0.55"/>
+    <path d="M1048 244 l2.4 2.6 l4.4 -5" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="1051.5" cy="244" r="8" fill="none" stroke="#34d399" stroke-opacity="0.55" stroke-width="1.2"/>
+    <text x="1074" y="248" font-size="9.5" letter-spacing="1.2" class="mono" fill="#7ff0c8">SHA-256 SEAL</text>
+    <text x="1096" y="278" text-anchor="middle" font-size="9" class="mono" fill="#34d399" fill-opacity="0.7">0xe024a312&#8230;eb63</text>
+  </g>
+
+  <!-- thesis -->
+  <text x="600" y="344" text-anchor="middle" font-size="13.5">
+    <tspan class="t-mid">The LLM writes the language.</tspan>
+    <tspan dx="10" fill="#a78bfa" font-weight="700">The deterministic math writes the truth.</tspan>
+  </text>
+</svg>

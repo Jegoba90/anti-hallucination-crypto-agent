@@ -25,31 +25,17 @@ We built a different architecture. Before any insight reaches you, a determinist
 
 ## How It Works
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  RADAR 4-LAYER ANTI-HALLUCINATION PIPELINE                  │
-│                                                             │
-│  LAYER 1 — Math Engine                                      │
-│  Python calculates Z-Score, Bollinger Bands, regime         │
-│  BEFORE the LLM sees any data                               │
-│                           ↓                                 │
-│  LAYER 2 — Prompt Injection (10 Laws)                       │
-│  Math values injected as NON-NEGOTIABLE constraints         │
-│  into the LLM prompt. Laws 0-9 restrict what AI can claim   │
-│                           ↓                                 │
-│  LAYER 3 — Numeric Override                                 │
-│  After the LLM responds, Python owns every numeric field    │
-│  The AI never has the last word on the numbers              │
-│                           ↓                                 │
-│  LAYER 4 — Lexical Filters (4 deterministic filters)        │
-│  Strips sentences containing: inflated volume claims,       │
-│  magnitude inflation, certainty markers, band-position      │
-│  contradictions — ~300 lexical pattern combinations         │
-│                           ↓                                 │
-│  ✅ SHA-256 AUDIT TRAIL EMITTED                             │
-│  protocol_hash certifies exactly which corrections ran      │
-└─────────────────────────────────────────────────────────────┘
-```
+![Radar 4-Layer Anti-Hallucination Pipeline: market data enters on the left, passes through Layer 1 Math Engine and Layer 2 Prompt Injection, then a caged LLM, then Layer 3 Numeric Override and Layer 4 Lexical Filters, and exits as a SHA-256 sealed verified insight](assets/pipeline.svg)
+
+Left to right, box by box:
+
+- **Market Data.** Price and volume for the asset. This is third-party input: in this system the raw feed is never the product, only the raw material.
+- **Layer 1 · Math Engine.** Python computes the Z-Score, Bollinger Bands and market regime *before* the LLM sees anything. This is the ground truth every later step defends.
+- **Layer 2 · Prompt Injection (10 Laws).** Those math values go into the prompt as non-negotiable constraints. Laws 0-9 bound what the model is even allowed to claim.
+- **LLM.** Writes the language, and only the language. It never gets the last word on a number, and it cannot invent one.
+- **Layer 3 · Numeric Override.** Once the model answers, Python reclaims every numeric field. On any collision between the prose and the math, the math wins.
+- **Layer 4 · Lexical Filters.** Four deterministic filters (~300 lexical patterns) strip inflated volume claims, magnitude inflation, false-certainty markers and band-position contradictions.
+- **Verified Insight + SHA-256 seal.** The grounded narrative ships with a `protocol_hash` certifying exactly which corrections ran. The same inputs always produce the same digest, so anyone can re-verify it independently.
 
 The LLM generates the language. The math engine generates the truth.
 
