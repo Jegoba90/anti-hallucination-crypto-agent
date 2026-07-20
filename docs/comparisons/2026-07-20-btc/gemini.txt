@@ -1,0 +1,7 @@
+I don't have access to live, real-time market data feeds, so I can't give you exact, up-to-the-minute readings for Bitcoin's current volume, sentiment, or position within its Bollinger Bands.
+
+To get an accurate live read right now:
+
+Bollinger Bands & Volume: Pull up a 4-hour or daily BTC chart on TradingView or Binance using standard (20, 2) parameters. Check if price is hugging the upper band (+2 sigma), resting near the lower band (-2 sigma), or consolidating around the 20-SMA middle line.
+
+Volume Conviction: Compare current candle volume against the 20-period volume moving average; high-volume rejections at the outer bands typically signal strong short-term sentiment shifts, while low volume near the middle band signals neutral consolidation.

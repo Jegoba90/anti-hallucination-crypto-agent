@@ -64,7 +64,7 @@
       <line x1="108" y1="196" x2="108" y2="234"/><rect x="104.5" y="205" width="7" height="18" fill="#7c8aa5" fill-opacity="0.55" stroke="none"/>
       <line x1="124" y1="202" x2="124" y2="229"/><rect x="120.5" y="209" width="7" height="13" fill="#7c8aa5" fill-opacity="0.55" stroke="none"/>
     </g>
-    <text x="100" y="258" text-anchor="middle" font-size="10" class="mono t-mid">price &#183; volume</text>
+    <text x="100" y="258" text-anchor="middle" font-size="10" class="mono t-mid">price &#183; news</text>
     <text x="100" y="273" text-anchor="middle" font-size="10" class="mono" fill="#64748b">asset &#183; live feed</text>
   </g>
 

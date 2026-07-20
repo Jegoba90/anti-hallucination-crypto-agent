@@ -1,0 +1,67 @@
+{
+  "status": "success",
+  "version": "1.0.0",
+  "timestamp": "2026-07-20T15:33:15.034Z",
+  "data": {
+    "engine_used": "radar",
+    "asset": {
+      "id": "bitcoin",
+      "symbol": "BTC"
+    },
+    "summary": "Lateralización de rango.",
+    "sentiment": "neutral",
+    "statistical_anomaly_detected": false,
+    "confidence": {
+      "score": 0.62,
+      "label": "MEDIUM"
+    },
+    "math_diagnostics": {
+      "z_score": 0.2254,
+      "z_score_threshold": 3.5051,
+      "bollinger_bandwidth": 0.0773,
+      "market_regime": "RANGING_CHOP",
+      "extreme_volatility_detected": false,
+      "data_quality": "OPTIMAL",
+      "data_quality_reason": [],
+      "sentiment_override": false,
+      "anomaly_details": null,
+      "regime_thresholds": {
+        "volatility_hard_limit": 0.05,
+        "z_score_anomaly_boundary": 3.5051,
+        "daily_change_trend_boundary": 0.02
+      },
+      "audit_trail": {
+        "protocol_hash": "0x8f96020dc070e069c2b8aead07e5e65450430ffacff9d2aff5017d6ad83fd059",
+        "calculated_at": "2026-07-20T15:33:14.747937Z",
+        "seal_type": "process_seal",
+        "algorithm_id": "Radar 4-Layer Anti-Hallucination Pipeline",
+        "engine_version": "v2.1.0-radar",
+        "filters_applied": [],
+        "fields_overridden": [
+          "analysis.anomaly_details",
+          "analysis.confidence",
+          "analysis.sentiment_score",
+          "confidence",
+          "is_volatility_alert"
+        ],
+        "sentiment_override": false
+      }
+    },
+    "analysis": {
+      "detailed_report": "La posición en Bandas de Bollinger es TERCIO_SUPERIOR. El régimen de mercado es de lateralización, con un cambio diario del 0.69%. No hay un catalizador fundamental evidente en las noticias recientes.",
+      "sources_verified": [
+        {
+          "title": "Saylor's Strategy raises cash reserves to $3.2 billion, leaving bitcoin holdings unchanged",
+          "url": "https://www.coindesk.com/business/2026/07/20/saylor-s-strategy-raises-cash-reserves-to-usd3-225-billion-leaving-bitcoin-holdings-unchanged",
+          "credibility": "Tier 1"
+        },
+        {
+          "title": "Strategy's Michael Saylor Makes 110-Point Case Against Bitcoin's BIP-110",
+          "url": "https://decrypt.co/373819/strategys-michael-saylor-makes-110-point-case-against-bitcoins-bip-110",
+          "credibility": "Tier 2"
+        }
+      ],
+      "sources_window": "24h"
+    }
+  }
+}

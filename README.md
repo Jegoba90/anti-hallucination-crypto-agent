@@ -29,7 +29,7 @@ We built a different architecture. Before any insight reaches you, a determinist
 
 Left to right, box by box:
 
-- **Market Data.** Price, volume and news for the asset. This is third-party input: in this system the raw feed is never the product, only the raw material.
+- **Market Data.** Price and news for the asset. This is third-party input: in this system the raw feed is never the product, only the raw material.
 - **Layer 1 · Math Engine.** Python computes the Z-Score, Bollinger Bands and market regime *before* the LLM sees anything. This is the ground truth every later step defends.
 - **Layer 2 · Prompt Injection (10 Laws).** Those math values go into the prompt as non-negotiable constraints. Laws 0-9 bound what the model is even allowed to claim.
 - **LLM.** Writes the language, and only the language. It never gets the last word on a number, and it cannot invent one.
@@ -38,6 +38,24 @@ Left to right, box by box:
 - **Verified Insight + SHA-256 seal.** The grounded narrative ships with a `protocol_hash` certifying exactly which corrections ran. The same inputs always produce the same digest, so anyone can re-verify it independently.
 
 The LLM generates the language. The math engine generates the truth.
+
+---
+
+## Same question, two kinds of answer
+
+Anyone can rerun this. On 2026-07-20, in plain conversational mode with no live-data tools, we asked GPT-5.5, Gemini 3.1 Pro and the Radar agent the same question about Bitcoin: where is price relative to its Bollinger Bands, what is the short-term sentiment, and how confident are you? The raw replies and Radar's full JSON are saved in [`docs/comparisons/2026-07-20-btc/`](docs/comparisons/2026-07-20-btc).
+
+We are not claiming the raw models are wrong. We cannot prove that, and neither can they. The claim is narrower, and it is the whole point of the product: **one of these three answers you can check, the other two you cannot.**
+
+| | Raw LLM (GPT-5.5 / Gemini 3.1 Pro) | Radar Agent |
+|---|---|---|
+| **Where the read comes from** | the model's own prose | a stated computation: Z-Score `0.2254`, Bollinger bandwidth `0.0773`, over a live price series |
+| **Are the inputs shown?** | no | yes, in the `math_diagnostics` block |
+| **Can you reproduce the result?** | no, it changes on every run | yes, recompute the SHA-256 from the payload ([Verify the Hash Yourself](#verify-the-hash-yourself)) |
+| **Sources behind the claim** | none | two cited headlines, Tier 1 and Tier 2, over a 24h window |
+| **What the seal proves** | there is nothing to seal | that the pipeline ran with exactly these values and was not tampered with (`process_seal`). It does not claim to be the market truth; it makes the read checkable |
+
+Asked where price sat in the bands, GPT-5.5 answered "around the middle", Gemini 3.1 Pro said it had no live data and pointed to TradingView, and the Radar agent returned `TERCIO_SUPERIOR` along with the Z-Score it was derived from and the hash `0x8f96020d…83fd059`. Whether "middle" or "upper third" is the truer label is not the argument. You can recompute the Radar answer from the numbers it shipped; you cannot recompute the other two.
 
 ---
 
