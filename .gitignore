@@ -11,3 +11,7 @@ venv/
 .idea/
 .vscode/
 *.log
+
+# Raster export of assets/social-card.svg, generated for the GitHub social
+# preview upload. The SVG is the source; the PNG is a build output.
+assets/social-card.png
