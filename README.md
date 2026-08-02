@@ -1,4 +1,4 @@
-![Anti-Hallucination Crypto Agent — AI crypto analysis that proves it didn't make anything up](assets/banner.png)
+![Anti-Hallucination Crypto Agent: AI crypto analysis that proves it didn't make anything up](assets/banner.svg)
 
 > A Python agent that analyzes crypto markets using AI, and **proves** it didn't make anything up.
 
