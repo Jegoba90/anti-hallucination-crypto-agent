@@ -36,8 +36,8 @@ _SEAL_TYPE_EXPLANATIONS: dict[str, str] = {
         "Text is not reproducible (LLM is non-deterministic by design)."
     ),
     "output_seal": (
-        "Certifies outputs were not tampered. "
-        "Re-fetchable from Binance candles to reproduce."
+        "Certifies these outputs match their digest. "
+        "Re-fetchable from Binance candles to reproduce it independently."
     ),
     "reproducible": (
         "Fully reproducible — recompute from the embedded input_vector "
@@ -97,6 +97,7 @@ def split_fields(
 class AuditSummary:
     is_pro: bool
     protocol_hash: str = ""
+    calculated_at: str = ""
     seal_type: str = ""
     seal_explanation: str = ""
     algorithm_id: str = ""
@@ -122,6 +123,10 @@ def parse_audit_trail(audit_trail: AuditTrail | None) -> AuditSummary:
     return AuditSummary(
         is_pro=True,
         protocol_hash=audit_trail.get("protocol_hash", ""),
+        # The engine's own stamp for when it computed this analysis. The renderer
+        # shows it instead of the wall clock: the collector runs on a cron, so
+        # "now" is the time of printing, never the age of the data.
+        calculated_at=audit_trail.get("calculated_at", ""),
         seal_type=seal_type,
         seal_explanation=explain_seal_type(seal_type),
         algorithm_id=audit_trail.get("algorithm_id", ""),

@@ -59,8 +59,77 @@ def _sentiment_color(sentiment: str) -> str:
     return COLORS["sentiment_neutral"]
 
 
+def _utc_now() -> datetime:
+    return datetime.now(tz=timezone.utc)
+
+
+def _format_utc(moment: datetime) -> str:
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
 def _now_utc() -> str:
-    return datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    return _format_utc(_utc_now())
+
+
+def _parse_calculated_at(raw: str) -> datetime | None:
+    """Read the engine's `calculated_at`, or None if absent or unparseable.
+
+    Never raises. A timestamp this renderer cannot read is a reason to say so in
+    the header, not to kill a run that is holding a perfectly good analysis.
+    """
+    if not raw:
+        return None
+    try:
+        moment = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    # A naive stamp is UTC: the API documents `calculated_at` in UTC and every
+    # response observed carries the trailing Z. Assuming local time here would
+    # silently shift the age by the reader's offset.
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=timezone.utc)
+
+
+def _format_age(computed: datetime, now: datetime) -> str:
+    """Say how old the analysis is, or "" when that cannot be said honestly.
+
+    A negative age means this machine's clock trails the engine's, not that the
+    analysis came from the future, so it is omitted rather than printed as a
+    nonsense "-3 min ago".
+    """
+    seconds = (now - computed).total_seconds()
+    if seconds < 0:
+        return ""
+    minutes = int(seconds // 60)
+    if minutes < 1:
+        return "just now"
+    if minutes < 60:
+        return f"{minutes} min ago"
+    hours = minutes // 60
+    if hours < 48:
+        return f"{hours} h ago"
+    return f"{hours // 24} d ago"
+
+
+def _timestamp_line(audit: AuditSummary) -> str:
+    """Report when the analysis was computed, never when it was printed.
+
+    The header used to print `datetime.now()`, which a reader takes for the age
+    of the data and is not: the collector runs on a cron, so a response can be
+    up to an hour old by the time it reaches the screen. A wall clock next to the
+    numbers is the display layer asserting a freshness nobody measured, which is
+    the move this whole tool exists to catch, made by the tool itself.
+
+    `calculated_at` is the engine's own stamp. When a response does not carry one
+    (the Pulse view ships no audit trail), the line says the time is the render's
+    rather than passing it off as the data's.
+    """
+    computed = _parse_calculated_at(audit.calculated_at)
+    if computed is None:
+        return f"Rendered {_now_utc()}, this response carries no analysis timestamp"
+
+    age = _format_age(computed, _utc_now())
+    line = f"Analysis computed {_format_utc(computed)}"
+    return f"{line} ({age})" if age else line
 
 
 def render_insight(data: InsightData, coin_id: str) -> None:
@@ -76,11 +145,16 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     is_alert = (math or {}).get("extreme_volatility_detected", False)
     confidence = data.get("confidence")
 
+    # Parsed before the header, not just before the audit block: the header's
+    # timestamp comes from the trail's `calculated_at`, so both readers of the
+    # audit share one parse instead of the display deriving a time of its own.
+    audit = parse_audit_trail(math.get("audit_trail") if math else None)
+
     # ── Header ──────────────────────────────────────────────
     header = Text()
     header.append(f"  CRYPTOCAPI RADAR — ", style=COLORS["header"])
     header.append(f"{name} ({symbol})", style=COLORS["coin_name"])
-    header.append(f"\n  {_now_utc()}", style=COLORS["muted"])
+    header.append(f"\n  {_timestamp_line(audit)}", style=COLORS["muted"])
 
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
@@ -129,9 +203,6 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     _render_sources(analysis or {})
 
     # ── Audit Trail (PRO) or Free banner ─────────────────────
-    audit_trail = math.get("audit_trail") if math else None
-    audit = parse_audit_trail(audit_trail)
-
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
 
@@ -282,7 +353,9 @@ def render_scan(results: list[ScanResult], strategy: str) -> None:
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📡 MARKET SCAN — strategy: [{COLORS['coin_name']}]{strategy}[/]")
     console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
-    console.print(f"  {_now_utc()}", style=COLORS["muted"])
+    # "Rendered": the scan payload carries no timestamp of its own, so this is
+    # the clock of the run, not the age of the signals. Say which one it is.
+    console.print(f"  Rendered {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
 
@@ -321,7 +394,9 @@ def render_batch(results: list[SignalResult]) -> None:
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📦 BATCH ANALYSIS — {len(results)} assets")
     console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
-    console.print(f"  {_now_utc()}", style=COLORS["muted"])
+    # "Rendered": the scan payload carries no timestamp of its own, so this is
+    # the clock of the run, not the age of the signals. Say which one it is.
+    console.print(f"  Rendered {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
 
     for r in results:
