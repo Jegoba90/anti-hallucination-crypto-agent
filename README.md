@@ -55,9 +55,11 @@ We are not claiming the raw models are wrong. We cannot prove that, and neither 
 | **Are the inputs shown?** | no | yes, in the `math_diagnostics` block |
 | **Can you reproduce the result?** | no, it changes on every run | yes, recompute the SHA-256 from the payload ([Verify the Hash Yourself](#verify-the-hash-yourself)) |
 | **Sources behind the claim** | none | two cited headlines, Tier 1 and Tier 2, over a 24h window |
-| **What the seal proves** | there is nothing to seal | that the pipeline ran with exactly these values and was not tampered with (`process_seal`). It does not claim to be the market truth; it makes the read checkable |
+| **What the seal proves** | there is nothing to seal | that the pipeline ran with exactly these values (`process_seal`). It is an unkeyed digest, so it is a checksum and not a proof of origin: see [what the seal does and does not prove](#what-the-seal-does-and-does-not-prove). It does not claim to be the market truth; it makes the read checkable |
 
-Asked where price sat in the bands, GPT-5.5 answered "around the middle", Gemini 3.1 Pro said it had no live data and pointed to TradingView, and the Radar agent returned `TERCIO_SUPERIOR` along with the Z-Score it was derived from and the hash `0x8f96020d…83fd059`. Whether "middle" or "upper third" is the truer label is not the argument. You can recompute the Radar answer from the numbers it shipped; you cannot recompute the other two.
+Asked where price sat in the bands, GPT-5.5 answered "around the middle", Gemini 3.1 Pro said it had no live data and pointed to TradingView, and the Radar agent returned `TERCIO_SUPERIOR`, which Python computes from the price against its Bollinger Bands, in a response carrying the seal `0x8f96020d…83fd059`. Whether "middle" or "upper third" is the truer label is not the argument.
+
+One limit, stated plainly, because overclaiming is exactly what this repo exists to catch: the band label is a different computation from the `z_score` above. The Z-Score scores the latest *return* against its own history, not where the price sits inside the bands, so neither one is derivable from the other. And today that label ships inside the narrative, not as its own field in `math_diagnostics`. So on this axis what you can reproduce independently is the seal, not the label. The other two answers offer neither.
 
 ---
 
@@ -92,7 +94,7 @@ own. You'll see the analysis **and** the audit trail proving it was verified.
 ```
 ───────────────────────────────────────────────────────
   CRYPTOCAPI RADAR — Bitcoin (BTC)
-  2026-06-19 14:32:07 UTC
+  Analysis computed 2026-06-17 23:19:21 UTC (12 min ago)
 ───────────────────────────────────────────────────────
 
   ↔️  MARKET REGIME:   RANGING_CHOP
@@ -153,6 +155,11 @@ own. You'll see the analysis **and** the audit trail proving it was verified.
   ✅ Math Override Certified (CTC-2026)
 ───────────────────────────────────────────────────────
 ```
+
+The date under the coin name is the engine's `calculated_at`, not the moment you
+ran the command. The collector refreshes on a cron, so the header reports the age
+of the analysis rather than the age of your terminal session. A response that
+carries no stamp says so instead of borrowing your clock.
 
 ---
 
@@ -245,9 +252,11 @@ python agent.py batch bitcoin ethereum solana
 
 ### Archive analysis you can re-verify later
 
-Because every response carries its `protocol_hash`, a JSON dump is not just a
-log: it is evidence. Store the raw responses and you can prove, months later,
-that the analysis you acted on was never altered after the fact.
+Because every response carries its `protocol_hash`, a JSON dump is more than a
+log. Store the raw responses **and record their digests somewhere separate**, and
+an archive edited after the fact stops matching. The seal is unkeyed, so the
+tamper-evidence lives in that independent copy of the hash, not in the file that
+carries it.
 
 ```bash
 python agent.py coin bitcoin --json > btc.json
@@ -360,8 +369,25 @@ print(digest == trail["protocol_hash"])
 # → True
 ```
 
-If it prints `True`, the pipeline ran with those exact corrections and nothing was
-tampered with in transit.
+If it prints `True`, the response is internally consistent: the corrections listed
+in the trail are exactly the ones the digest was computed over.
+
+### What the seal does and does not prove
+
+Being vague here would be the same defect this repo exists to catch, only pointed
+at itself. The `protocol_hash` is an **unkeyed** SHA-256 over values the engine
+reports about itself, which makes it a checksum, not a signature:
+
+- **It catches** corruption, truncation, and any later edit to a payload whose
+  digest you recorded somewhere independent. Write the hash down when the
+  response arrives and a changed archive stops matching months later.
+- **It does not catch** anyone who can recompute the hash after editing the
+  payload, which includes a man-in-the-middle and the API operator itself. An
+  unkeyed digest carries no proof of origin. Only a signed seal would.
+
+So the honest reading of `True` is "this is the response that was sealed under a
+hash I already trusted", and that trust has to come from where you stored the
+hash, not from the response carrying it.
 
 ---
 
