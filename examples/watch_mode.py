@@ -12,10 +12,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dotenv import load_dotenv
 
-load_dotenv()
+from cryptocapi.client import CryptoCapiClient, DemoCoinRestricted, resolve_api_key
+from display.terminal import (
+    console,
+    render_demo_restricted,
+    render_error,
+    render_insight,
+    render_no_analysis,
+    render_sentiment_change,
+)
 
-from cryptocapi.client import CryptoCapiClient, resolve_api_key
-from display.terminal import console, render_insight
+load_dotenv()
 
 
 async def watch(coin_id: str, interval_minutes: int) -> None:
@@ -25,19 +32,22 @@ async def watch(coin_id: str, interval_minutes: int) -> None:
     while True:
         try:
             data = await client.get_insight(coin_id)
-            current_sentiment = data.get("sentiment", "neutral")
+            if data is None:
+                # No analysis yet: an answer, not an error. Keep waiting for one.
+                render_no_analysis(coin_id)
+            else:
+                render_insight(data, coin_id)
+                current_sentiment = data.get("sentiment")
+                if last_sentiment and current_sentiment and current_sentiment != last_sentiment:
+                    render_sentiment_change(last_sentiment, current_sentiment)
+                last_sentiment = current_sentiment or last_sentiment
 
-            if last_sentiment and current_sentiment != last_sentiment:
-                console.print(
-                    f"\n  [bold yellow]⚡ SENTIMENT CHANGED:[/bold yellow] "
-                    f"{last_sentiment} → {current_sentiment}\n"
-                )
-
-            render_insight(data, coin_id)
-            last_sentiment = current_sentiment
-
+        except DemoCoinRestricted as exc:
+            # Permanent: the demo key refuses this coin on every poll.
+            render_demo_restricted(exc.user_message)
+            return
         except Exception as exc:
-            console.print(f"\n  [red]Error:[/red] {exc}\n")
+            render_error(str(exc))
 
         console.print(f"  [dim]Refreshing in {interval_minutes} min — Ctrl+C to stop[/dim]\n")
         await asyncio.sleep(interval_minutes * 60)

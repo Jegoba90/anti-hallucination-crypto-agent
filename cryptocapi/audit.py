@@ -60,6 +60,7 @@ def explain_seal_type(seal_type: str) -> str:
 _CORRECTION_REASONS: dict[str, str] = {
     "sentiment": "Python overrode the LLM's verdict (Z-Score rule)",
     "analysis.detailed_report": "the lexical filters rewrote the narrative",
+    "summary": "LEY 7 cut a volume claim out of the summary",
 }
 
 
@@ -70,15 +71,18 @@ def split_fields(
 
     The two are not the same thing, and lumping them together overstates the case.
     Most entries are structural: Python writes them on every single response, so the
-    LLM never gets a say, whether or not it was about to say something wrong. Only
-    two entries are conditional, and those are the real catches: `sentiment` appears
-    only when the Z-Score rule overrode the LLM's verdict, and
-    `analysis.detailed_report` only when a lexical filter cut text out of it.
+    LLM never gets a say, whether or not it was about to say something wrong. The
+    conditional entries are the real catches: `sentiment` appears only when the
+    Z-Score rule overrode the LLM's verdict, `analysis.detailed_report` only when a
+    lexical filter cut text out of it, and `summary` (since `v2.4.0-radar`) only when
+    LEY 7 cut a volume claim out of the LLM's summary.
 
     The split is derived from the trail itself (`sentiment_override` and
-    `filters_applied` are exactly the conditions that add those two entries), so this
-    does not hardcode a copy of the engine's list. Anything unrecognised is reported
-    as owned, which is the conservative side: it claims a guarantee, not a catch.
+    `filters_applied` are exactly the conditions that add the first two entries), so
+    this does not hardcode a copy of the engine's list. `summary` needs no condition:
+    the LLM writes it, so whenever it is listed it is a correction, never something
+    Python owns. Anything unrecognised is reported as owned, which is the
+    conservative side: it claims a guarantee, not a catch.
     """
     corrected: list[tuple[str, str]] = []
     if sentiment_override and "sentiment" in fields_overridden:
@@ -87,6 +91,8 @@ def split_fields(
         corrected.append(
             ("analysis.detailed_report", _CORRECTION_REASONS["analysis.detailed_report"])
         )
+    if "summary" in fields_overridden:
+        corrected.append(("summary", _CORRECTION_REASONS["summary"]))
 
     corrected_names = {name for name, _ in corrected}
     owned = [f for f in fields_overridden if f not in corrected_names]

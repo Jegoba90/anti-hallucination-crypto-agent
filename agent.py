@@ -18,9 +18,12 @@ from display.terminal import (
     console,
     render_batch,
     render_demo_restricted,
+    render_error,
     render_insight,
+    render_no_analysis,
     render_pro_required,
     render_scan,
+    render_sentiment_change,
 )
 
 load_dotenv()
@@ -53,13 +56,21 @@ def coin(
     coin_id: str = typer.Argument(..., help="Coin slug, e.g. bitcoin, ethereum, solana"),
     watch: bool = typer.Option(False, "--watch", "-w", help="Poll continuously"),
     interval: int = typer.Option(
-        30, "--interval", "-i", help="Polling interval in minutes (requires --watch)"
+        30, "--interval", "-i", min=1, help="Polling interval in minutes (requires --watch)"
     ),
     json_output: bool = typer.Option(
         False, "--json", help="Print the raw API response as JSON (verify it yourself)"
     ),
 ) -> None:
     """Analyze a single coin with full anti-hallucination audit trail."""
+    if json_output and watch:
+        # --json is a one-shot dump meant for a file. It used to win silently and
+        # drop --watch; polling it instead would chain JSON documents into one
+        # stream no parser reads. Neither is what was asked, so say so.
+        raise typer.BadParameter(
+            "--json prints one response and exits; it cannot be combined with --watch.",
+            param_hint="'--json'",
+        )
 
     async def _run() -> None:
         client = _get_client()
@@ -67,6 +78,7 @@ def coin(
         # Raw JSON mode: one-shot dump of exactly what the API returned, so a
         # dev can inspect the audit_trail and reproduce the protocol_hash. Always
         # emits valid JSON (ensure_ascii keeps it safe on non-UTF-8 terminals).
+        # No analysis prints `null`, which is what the API said, and exits 0.
         if json_output:
             try:
                 data = await client.get_insight(coin_id)
@@ -84,18 +96,32 @@ def coin(
                 raise typer.Exit(1)
             return
 
+        last_sentiment: str | None = None
         while True:
             try:
                 data = await client.get_insight(coin_id)
-                render_insight(data, coin_id)
+                if data is None:
+                    # An answer, not a failure: no engine has analyzed this coin
+                    # yet. A one-shot run exits 0; --watch waits for one.
+                    render_no_analysis(coin_id)
+                else:
+                    render_insight(data, coin_id)
+                    sentiment = data.get("sentiment")
+                    # The flip is what --watch is for. It goes after the render so
+                    # it is the last thing on screen while the next wait runs.
+                    if last_sentiment and sentiment and sentiment != last_sentiment:
+                        render_sentiment_change(last_sentiment, sentiment)
+                    last_sentiment = sentiment or last_sentiment
             except DemoCoinRestricted as exc:
                 render_demo_restricted(exc.user_message)
-                # Watch mode polls through failures; a one-shot run reports
-                # them in its exit code so scripts can react.
-                if not watch:
-                    raise typer.Exit(1)
+                # Not a transient failure, so --watch stops too: the demo key
+                # refuses this coin on every poll, and retrying would only spend
+                # the demo's hourly quota on the same refusal.
+                raise typer.Exit(1)
             except Exception as exc:
-                console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
+                render_error(str(exc))
+                # Watch mode polls through transient failures; a one-shot run
+                # reports them in its exit code so scripts can react.
                 if not watch:
                     raise typer.Exit(1)
 
@@ -118,7 +144,9 @@ def scan(
         "-s",
         help="Ranking strategy: balanced | aggressive | conservative",
     ),
-    limit: int = typer.Option(10, "--limit", "-l", help="Number of results to show"),
+    # The API validates strategy and limit and says what it rejected (ApiError),
+    # so its bounds are documented here, not duplicated where they could drift.
+    limit: int = typer.Option(10, "--limit", "-l", help="Number of results to show (1-50)"),
 ) -> None:
     """Rank all tracked assets by signal strength."""
 
@@ -131,7 +159,7 @@ def scan(
             render_pro_required(exc.user_message)
             raise typer.Exit(1)
         except Exception as exc:
-            console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
+            render_error(str(exc))
             raise typer.Exit(1)
 
     _run_async(_run())
@@ -140,7 +168,7 @@ def scan(
 @app.command()
 def batch(
     symbols: list[str] = typer.Argument(
-        ..., help="Coin slugs to analyze, e.g. bitcoin ethereum solana"
+        ..., help="Coin slugs to analyze (up to 50), e.g. bitcoin ethereum solana"
     ),
 ) -> None:
     """Analyze multiple coins at once and compare their signals."""
@@ -150,11 +178,16 @@ def batch(
         try:
             results = await client.get_batch_signals(symbols)
             render_batch(results)
+        except DemoCoinRestricted as exc:
+            # The demo key reaches batch for bitcoin and ethereum; one other coin
+            # in the list and the API rejects the whole batch.
+            render_demo_restricted(exc.user_message)
+            raise typer.Exit(1)
         except ProEngineRequired as exc:
             render_pro_required(exc.user_message)
             raise typer.Exit(1)
         except Exception as exc:
-            console.print(f"\n  [bold red]Error:[/bold red] {exc}\n")
+            render_error(str(exc))
             raise typer.Exit(1)
 
     _run_async(_run())

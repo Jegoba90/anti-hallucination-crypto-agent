@@ -178,21 +178,24 @@ python agent.py coin bitcoin --watch --interval 15
 
 # Raw API response, audit trail included: verify the hash yourself
 python agent.py coin bitcoin --json
+
+# Batch: both coins in one request
+python agent.py batch bitcoin ethereum
 ```
 
-**Requires a free trial key (any coin + the Quant Pro engines):**
+**Requires a free trial key (any coin + the Market Scan engine):**
 
 ```bash
 # Any other coin
 python agent.py coin solana
 
+# Batch with any other coin (the demo key rejects the whole batch otherwise)
+python agent.py batch bitcoin ethereum solana
+
 # Market scan: rank all tracked assets by signal strength
 python agent.py scan
 python agent.py scan --strategy aggressive --limit 5
 python agent.py scan --strategy conservative
-
-# Batch: analyze multiple coins in one request
-python agent.py batch bitcoin ethereum solana
 ```
 
 > Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com)
@@ -246,8 +249,9 @@ One request, several coins, the same deterministic yardstick. Useful for the
 measured identically instead of narrated separately.
 
 ```bash
-python agent.py batch bitcoin ethereum solana
-# script version: python examples/batch_compare.py bitcoin ethereum solana
+python agent.py batch bitcoin ethereum
+# script version: python examples/batch_compare.py bitcoin ethereum
+# add solana or any other coin with a trial key
 ```
 
 ### Archive analysis you can re-verify later
@@ -272,8 +276,8 @@ package, call `get_insight()`, and hand your model numbers computed by Python
 and text that already went through the 4-layer pipeline. See
 [Use It in Your Own Code](#use-it-in-your-own-code).
 
-> Single-coin analysis, watch mode and the JSON dump run on the pre-configured
-> demo key (BTC & ETH). Market scan and batch need a
+> Single-coin analysis, watch mode, the JSON dump and batch run on the
+> pre-configured demo key (BTC & ETH). Market scan and any other coin need a
 > [free 14-day trial key](https://cryptocapi.com).
 
 ---
@@ -285,23 +289,27 @@ pipeline identity (`algorithm_id`, `engine_version`), the math inputs that
 drove the overrides (`z_score`, `market_regime`, `sentiment`,
 `sentiment_override`), and the sorted lists of what the pipeline touched
 (`filters_applied`, `fields_overridden`). No wall-clock timestamp is hashed,
-so the same inputs always produce the same digest.
+so the same inputs always produce the same digest. The keys are sorted and the
+JSON is compact; how the one number in it, `z_score`, is written depends on the
+engine version, and the response says which version sealed it (below).
 
 A word on `fields_overridden`, because the output above splits it in two and the
 seal does not. Five entries are always present (`analysis.anomaly_details`,
 `analysis.confidence`, `analysis.sentiment_score`, `confidence`,
 `is_volatility_alert`): the math engine writes those on every single response, so
 the LLM never gets a say. That is a **guarantee**, not a catch, and the CLI labels
-it as such. Two more entries are conditional, and those are the real catches:
-`sentiment` shows up only when the Z-Score rule overrode the LLM's verdict, and
-`analysis.detailed_report` only when a lexical filter cut text out of it. The run
-above has both, which is why it seals seven.
+it as such. The other entries are conditional, and those are the real catches:
+`sentiment` shows up only when the Z-Score rule overrode the LLM's verdict,
+`analysis.detailed_report` only when a lexical filter cut text out of it, and,
+since `v2.4.0-radar`, `summary` only when LEY 7 cut a volume claim out of the
+summary. The run above has the first two, which is why it seals seven.
 
 The seal hashes the raw union of the seven, exactly as the API ships it.
 
 This is the exact payload behind the output above, and the same fixture the test
-suite runs against. Run it and you get that exact hash, with no dependencies and
-no CryptoCapi account needed:
+suite runs against. It is a `v2.1.0-radar` seal, from before the rule change
+described in the next section, so `z_score` goes in as a plain number. Run it and
+you get that exact hash, with no dependencies and no CryptoCapi account needed:
 
 ```python
 import hashlib, json
@@ -340,9 +348,14 @@ Dump exactly what the API returned, audit trail included:
 python agent.py coin bitcoin --json > btc.json
 ```
 
-Then rebuild the payload from that file and hash it. Note the one precision
-detail: the seal hashes `z_score` rounded to **6 decimals**, while the response
-exposes it at full float precision, so round it first.
+Then rebuild the payload from that file and hash it. One rule depends on the
+version in `engine_version`: since `v2.2.0-radar` (2026-09-01), every number is
+sealed as a string with exactly 6 decimals, so `0.3296` goes in as `"0.329600"`.
+That keeps the digest independent of how a JSON encoder happens to print a
+number, which it is not across languages: `63482.0` in Python is `63482` in
+JavaScript. `v2.1.0-radar` seals, like the example above, hashed the number as
+it was. Every response the API serves today carries a later version; the check
+on the version is there so a dump archived before the change still verifies.
 
 ```python
 import hashlib, json
@@ -354,13 +367,18 @@ trail = math["audit_trail"]
 payload = {
     "algorithm_id": trail["algorithm_id"],
     "engine_version": trail["engine_version"],
-    "z_score": round(math["z_score"], 6),
+    "z_score": math["z_score"],
     "market_regime": math["market_regime"],
     "sentiment": response["sentiment"],
     "sentiment_override": trail["sentiment_override"],
     "filters_applied": trail["filters_applied"],
     "fields_overridden": trail["fields_overridden"],
 }
+
+# z_score is the only number in this payload. Python's format() rounds half to
+# even, exactly as the engine does; JavaScript's toFixed() does not.
+if trail["engine_version"] != "v2.1.0-radar":
+    payload["z_score"] = format(payload["z_score"], ".6f")
 
 serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 digest = "0x" + hashlib.sha256(serialized.encode()).hexdigest()
@@ -404,6 +422,11 @@ async def main():
     # own sk_live_... key (14-day trial) to analyze any other coin.
     client = CryptoCapiClient(api_key="demo_btc_eth_public")
     data = await client.get_insight("bitcoin")
+    if data is None:
+        # The API's `data: null`: no engine has analyzed the coin yet.
+        # A valid answer, not an error. Don't fill the gap.
+        print("No analysis available yet")
+        return
 
     # Use the insight (note the nesting, see cryptocapi/models.py)
     print(data["sentiment"])                          # neutral
@@ -422,16 +445,21 @@ async def main():
 asyncio.run(main())
 ```
 
-The client raises three errors, all importable straight from `cryptocapi`:
+`get_insight` returns `None` when the API answers `data: null`, which it does for
+any coin no engine has analyzed yet, and for an id it does not know. That is an
+answer, not an error, so it is not raised.
+
+The client raises four errors, all importable straight from `cryptocapi`:
 
 | Error | When it fires |
 |---|---|
-| `DemoCoinRestricted` | the demo key asked for a coin outside BTC and ETH |
-| `ProEngineRequired` | `get_market_scan` or `get_batch_signals` ran on a key that doesn't reach the Quant engines |
+| `DemoCoinRestricted` | the demo key asked for a coin outside BTC and ETH, in `get_insight` or anywhere in a `get_batch_signals` list |
+| `ProEngineRequired` | `get_market_scan` or `get_batch_signals` ran on a key that doesn't include that engine (the demo key never reaches the scan) |
+| `ApiError` | any other non-2xx answer: a rate limit, a rejected parameter, an outage. `.status_code` says which; it is also an `httpx.HTTPStatusError` |
 | `UnexpectedResponse` | the API answered with something other than the envelope `models.py` describes |
 
-The first two carry the API's own wording in `.user_message`, so you can show it to
-a user as it is.
+All but `UnexpectedResponse` carry the API's own wording in `.user_message`, so you
+can show it to a user as it is.
 
 ---
 
@@ -450,16 +478,25 @@ a user as it is.
 │   ├── basic_analysis.py  # Minimal: analyze BTC in 20 lines
 │   ├── watch_mode.py      # Poll + detect sentiment changes
 │   ├── market_scanner.py  # Screener using market-scan endpoint
-│   └── batch_compare.py   # BTC vs ETH vs SOL side by side
+│   └── batch_compare.py   # BTC vs ETH side by side (any coins with a trial key)
 └── tests/
     ├── test_audit_parser.py        # Parser + hash reproducibility
     ├── test_readme_consistency.py  # Pins this README to the fixture
+    ├── test_seal_recipe.py         # The live recipe above, run as written, verifies real seals
+    ├── test_published_evidence.py  # The sealed captures in docs/comparisons still verify
+    ├── test_client_contract.py     # The client reads what the live API actually sends
+    ├── test_cli.py                 # Watch mode flags sentiment flips; impossible flags fail loudly
     ├── test_render_audit.py        # The audit block's claims survive the renderer
     ├── test_render_verdict.py      # The CLI shows the engine's verdict, never its own
     ├── test_render_sources.py      # The evidence behind the narrative reaches the screen
+    ├── test_render_timestamp.py    # The header dates the analysis, not the printing
+    ├── test_render_quant.py        # Scan and batch rows name their asset and show the ranking
+    ├── test_render_markup.py       # API text prints as text, never as Rich markup
     ├── test_pro_required.py        # The Quant plan gate reads as an offer, not an HTTP error
     ├── test_terminal_encoding.py   # The output survives a terminal that isn't UTF-8
-    └── fixtures/sample_response.json
+    └── fixtures/
+        ├── sample_response.json    # The insight behind the output above
+        └── api/                    # Live captures, one per route the client calls
 ```
 
 ---
@@ -467,13 +504,22 @@ a user as it is.
 ## Run the Tests
 
 ```bash
-pip install pytest
+pip install -r requirements-dev.txt
 pytest tests/ -v
+mypy .
+ruff check .
 ```
 
 No network calls and no API key required: every test runs against a local
-fixture. That includes the check that reproduces the `protocol_hash` documented
-above, so a change to the pipeline that broke the seal would fail the suite.
+fixture. That includes running the live recipe above, exactly as written here,
+on the dump `coin --json` makes of a `v2.1.0-radar` and of a `v2.4.0-radar`
+response, so the recipe cannot drift from the seals it claims to verify without
+the suite failing. What the suite cannot see is an engine version newer than its
+newest capture: a seal rule that changes again needs a fresh one.
+
+The client's tests replay responses captured off the live API, in
+`tests/fixtures/api/`. The scan, which the demo key cannot reach, uses the
+example the API's OpenAPI document publishes for that route.
 
 ---
 

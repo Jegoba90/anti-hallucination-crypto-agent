@@ -1,0 +1,55 @@
+{
+  "status": "success",
+  "version": "1.0.0",
+  "timestamp": "2026-05-28T20:51:17.598Z",
+  "data": {
+    "strategy": "aggressive",
+    "count": 2,
+    "results": [
+      {
+        "asset": {
+          "id": "bitcoin",
+          "symbol": "btc"
+        },
+        "signal": "HOLD",
+        "sentiment": "bullish",
+        "z_score": 1.3737,
+        "market_regime": "RANGING_CHOP",
+        "threshold_proximity": 0.3919,
+        "evidence_weight": 1,
+        "confidence": {
+          "score": 0.69,
+          "label": "MEDIUM"
+        },
+        "risk_level": "LOW",
+        "trigger_condition": "Z-Score en 1.37. Señal HOLD en régimen RANGING_CHOP — requiere |z| >= 3.51 para activar BUY_WATCH/SELL_WATCH, o régimen EXTREME_VOLATILITY para ALERT.",
+        "summary": "Lateralización en bandas normales, con leve presión alcista.",
+        "current_price": 64063,
+        "price_change_percentage_24h": 1.7,
+        "generated_at": "2026-08-17T16:02:24.247Z"
+      },
+      {
+        "asset": {
+          "id": "zcash",
+          "symbol": "zec"
+        },
+        "signal": "HOLD",
+        "sentiment": "bullish",
+        "z_score": 1.2335,
+        "market_regime": "BULLISH_TREND",
+        "threshold_proximity": 0.3519,
+        "evidence_weight": 1,
+        "confidence": {
+          "score": 0.88,
+          "label": "MEDIUM"
+        },
+        "risk_level": "MEDIUM",
+        "trigger_condition": "Z-Score en 1.23. Señal HOLD en régimen BULLISH_TREND — requiere |z| >= 3.51 para activar BUY_WATCH/SELL_WATCH, o régimen EXTREME_VOLATILITY para ALERT.",
+        "summary": "Continuidad de tendencia alcista.",
+        "current_price": 511.87,
+        "price_change_percentage_24h": 3.8,
+        "generated_at": "2026-08-17T15:05:13.017Z"
+      }
+    ]
+  }
+}

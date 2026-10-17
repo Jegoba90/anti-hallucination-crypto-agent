@@ -44,8 +44,14 @@ CREDIBILITY_COLORS: dict[str, str] = {
     "Tier 3": "red",
 }
 
+# The Quant Plus signal enum, as the OpenAPI document lists it.
 SIGNAL_COLORS: dict[str, str] = {
+    "STRONG_BUY": "bold green",
     "BUY": "green",
+    "BUY_WATCH": "cyan",
+    "HOLD": "yellow",
+    "SELL_WATCH": "magenta",
     "SELL": "red",
-    "NEUTRAL": "yellow",
+    "STRONG_SELL": "bold red",
+    "ALERT": "bold red",
 }

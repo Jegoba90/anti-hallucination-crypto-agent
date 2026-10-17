@@ -1,0 +1,6 @@
+# What the test suite and the CI gates need. Running the agent needs only
+# requirements.txt.
+-r requirements.txt
+pytest>=8.0
+mypy>=1.10
+ruff>=0.5

@@ -1,0 +1,1 @@
+{"status":"error","message":"Your API key does not include this engine. Required product: 'market_scan'.","code":"PRODUCT_NOT_INCLUDED","required_product":"market_scan"}

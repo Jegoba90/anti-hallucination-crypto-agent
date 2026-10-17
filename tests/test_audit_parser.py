@@ -8,7 +8,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cryptocapi.audit import (
-    AuditSummary,
     explain_filter,
     explain_seal_type,
     parse_audit_trail,
@@ -104,6 +103,20 @@ class TestSplitFields:
         assert [name for name, _ in corrected] == ["analysis.detailed_report"]
         assert "analysis.detailed_report" not in owned
 
+    def test_summary_is_a_correction_never_a_guarantee(self) -> None:
+        """Since v2.4.0-radar, LEY 7 also cuts volume claims out of the summary.
+
+        The LLM writes the summary, so listing it as a field Python owns would
+        claim a guarantee that does not exist.
+        """
+        fields = self._BASE + ["summary"]
+        owned, corrected = split_fields(
+            fields, sentiment_override=False, filters_applied=["LEY 7 volume"]
+        )
+
+        assert [name for name, _ in corrected] == ["summary"]
+        assert "summary" not in owned
+
     def test_split_is_a_partition_of_the_sealed_list(self) -> None:
         fixture = _load_fixture()
         trail = fixture["data"]["math_diagnostics"]["audit_trail"]
@@ -181,8 +194,10 @@ class TestVerifyHashFormat:
 class TestHashReproducibility:
     """Reproduce the protocol_hash from the response exactly like a third party
     would — pulling z_score/market_regime from math_diagnostics, sentiment from
-    the root, and filters/fields from the audit_trail. This guards the README's
-    'Verify the Hash Yourself' claim against silent drift.
+    the root, and filters/fields from the audit_trail. This pins the README's
+    offline example, a `v2.1.0-radar` seal, and nothing newer: the live recipe,
+    which has to cover every engine version, runs as written in
+    test_seal_recipe.py.
     """
 
     def test_recomputed_hash_matches_fixture(self) -> None:

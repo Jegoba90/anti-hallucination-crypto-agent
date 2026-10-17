@@ -13,10 +13,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from cryptocapi.client import CryptoCapiClient, ProEngineRequired, resolve_api_key
 from display.terminal import render_pro_required, render_scan
+
+load_dotenv()
 
 
 async def main(strategy: str, limit: int) -> None:
@@ -24,8 +24,8 @@ async def main(strategy: str, limit: int) -> None:
     try:
         results = await client.get_market_scan(strategy=strategy, limit=limit)
     except ProEngineRequired as exc:
-        # The demo key does not reach Quant Plus. That is the expected answer
-        # here, so show the offer instead of dying on a traceback.
+        # The demo key does not include the Market Scan engine. That is the
+        # expected answer here, so show the offer instead of dying on a traceback.
         render_pro_required(exc.user_message)
         return
     render_scan(results, strategy)

@@ -8,7 +8,7 @@ from rich.text import Text
 from rich import box
 
 from cryptocapi.audit import AuditSummary, explain_field, parse_audit_trail
-from cryptocapi.models import Analysis, InsightData, ScanResult, SignalResult
+from cryptocapi.models import Analysis, InsightData, QuantAsset, ScanResult, SignalResult
 from .themes import (
     COLORS,
     CONFIDENCE_COLORS,
@@ -152,7 +152,7 @@ def render_insight(data: InsightData, coin_id: str) -> None:
 
     # ── Header ──────────────────────────────────────────────
     header = Text()
-    header.append(f"  CRYPTOCAPI RADAR — ", style=COLORS["header"])
+    header.append("  CRYPTOCAPI RADAR — ", style=COLORS["header"])
     header.append(f"{name} ({symbol})", style=COLORS["coin_name"])
     header.append(f"\n  {_timestamp_line(audit)}", style=COLORS["muted"])
 
@@ -166,15 +166,18 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     sentiment_icon = SENTIMENT_ICONS.get(sentiment, "➡️ ")
     s_color = _sentiment_color(sentiment)
 
+    # Everything the API wrote goes through escape(): the narrative is LLM text,
+    # and a "[/]" in it used to crash the render while a "[bold]" silently
+    # vanished, so the screen showed something other than what the API sent.
     console.print()
-    console.print(f"  {regime_icon} MARKET REGIME:   [{COLORS['regime']}]{regime}[/]")
-    console.print(f"  {sentiment_icon} SENTIMENT:       [{s_color}]{sentiment}[/]")
+    console.print(f"  {regime_icon} MARKET REGIME:   [{COLORS['regime']}]{escape(regime)}[/]")
+    console.print(f"  {sentiment_icon} SENTIMENT:       [{s_color}]{escape(sentiment)}[/]")
 
     if confidence:
         score = confidence.get("score", 0.0)
         label = confidence.get("label", "—")
         c_color = CONFIDENCE_COLORS.get(label, "white")
-        console.print(f"  🎯 CONFIDENCE:      [{c_color}]{label} ({score:.2f})[/]")
+        console.print(f"  🎯 CONFIDENCE:      [{c_color}]{escape(label)} ({score:.2f})[/]")
 
     if math:
         z = math.get("z_score")
@@ -195,10 +198,10 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     if report:
         console.print("\n  [bold]ANALYSIS:[/bold]")
         for line in report.strip().split("\n"):
-            console.print(f"   {line}")
+            console.print(f"   {escape(line)}")
     elif summary:
         console.print("\n  [bold]SUMMARY:[/bold]")
-        console.print(f"   {summary}")
+        console.print(f"   {escape(summary)}")
 
     _render_sources(analysis or {})
 
@@ -249,10 +252,10 @@ def _render_audit(audit: AuditSummary) -> None:
     console.print("  🛡️  [bold]ANTI-HALLUCINATION AUDIT TRAIL[/bold]")
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
-    console.print(f"  Pipeline:  [{COLORS['muted']}]{audit.algorithm_id}[/]")
-    console.print(f"  Version:   [{COLORS['muted']}]{audit.engine_version}[/]")
-    console.print(f"  Seal type: [{COLORS['muted']}]{audit.seal_type}[/]")
-    console.print(f"             [{COLORS['muted']}]{audit.seal_explanation}[/]")
+    console.print(f"  Pipeline:  [{COLORS['muted']}]{escape(audit.algorithm_id)}[/]")
+    console.print(f"  Version:   [{COLORS['muted']}]{escape(audit.engine_version)}[/]")
+    console.print(f"  Seal type: [{COLORS['muted']}]{escape(audit.seal_type)}[/]")
+    console.print(f"             [{COLORS['muted']}]{escape(audit.seal_explanation)}[/]")
 
     console.print()
     if audit.filters:
@@ -294,7 +297,7 @@ def _render_audit(audit: AuditSummary) -> None:
     if audit.protocol_hash:
         console.print()
         console.print("  Protocol hash (SHA-256):")
-        console.print(f"    [{COLORS['hash']}]{audit.protocol_hash}[/]")
+        console.print(f"    [{COLORS['hash']}]{escape(audit.protocol_hash)}[/]")
 
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
@@ -308,10 +311,41 @@ def render_demo_restricted(message: str) -> None:
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  🔒  [{COLORS['free_banner']}]DEMO KEY — bitcoin & ethereum only[/]")
     console.print()
-    console.print(f"  [{COLORS['muted']}]{message}[/]")
+    console.print(f"  [{COLORS['muted']}]{escape(message)}[/]")
     console.print()
     console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
     console.print(_DIVIDER, style=COLORS["divider"])
+    console.print()
+
+
+def render_no_analysis(coin_id: str) -> None:
+    """Say the API has no analysis for this coin: an answer, not a failure.
+
+    The API answers `data: null` when no engine has produced an analysis yet, for
+    any coin, majors included. Putting something in that gap is exactly what this
+    tool exists to catch, so the screen says there is nothing and shows nothing.
+    """
+    console.print()
+    console.print(_DIVIDER, style=COLORS["divider"])
+    console.print(f"  [{COLORS['warning']}]NO ANALYSIS YET — {escape(coin_id)}[/]")
+    console.print()
+    console.print(f"  [{COLORS['muted']}]CryptoCapi has no analysis for this coin right now:[/]")
+    console.print(f"  [{COLORS['muted']}]no engine has produced one, and nothing is shown in its place.[/]")
+    console.print(f"  [{COLORS['muted']}]Check the id too: an unknown coin gets the same answer.[/]")
+    console.print(_DIVIDER, style=COLORS["divider"])
+    console.print()
+
+
+def render_error(message: str) -> None:
+    # escape(): the message can quote the API, and its text is not markup.
+    console.print(f"\n  [bold red]Error:[/bold red] {escape(message)}\n")
+
+
+def render_sentiment_change(previous: str, current: str) -> None:
+    """Flag a sentiment flip between two polls of `coin --watch`."""
+    console.print(
+        f"  [{COLORS['warning']}]⚡ SENTIMENT CHANGED:[/] {escape(previous)} → {escape(current)}"
+    )
     console.print()
 
 
@@ -328,7 +362,8 @@ def render_pro_required(message: str) -> None:
     console.print()
     console.print(f"  [{COLORS['muted']}]{escape(message)}[/]")
     console.print(
-        f"  [{COLORS['muted']}]The public demo key covers bitcoin and ethereum insights only.[/]"
+        f"  [{COLORS['muted']}]The public demo key reaches bitcoin and ethereum only, "
+        f"on insights and batch.[/]"
     )
     console.print()
     console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
@@ -348,44 +383,71 @@ def _render_pulse_view_banner() -> None:
     console.print()
 
 
+def _asset_label(asset: QuantAsset | None) -> str:
+    """Name a Quant row. Identity lives under `asset` there, never at the top."""
+    asset = asset or {}
+    name = (asset.get("id") or "—").capitalize()
+    symbol = (asset.get("symbol") or "").upper()
+    return f"{name} ({symbol})" if symbol else name
+
+
+def _axis(value: float | None) -> str:
+    # null means the engine had no threshold or sample for this asset: show the
+    # gap rather than a 0.00 that would read as a measurement.
+    return f"{value:.2f}" if value is not None else "—"
+
+
 def render_scan(results: list[ScanResult], strategy: str) -> None:
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
-    console.print(f"  📡 MARKET SCAN — strategy: [{COLORS['coin_name']}]{strategy}[/]")
+    console.print(f"  📡 MARKET SCAN — strategy: [{COLORS['coin_name']}]{escape(strategy)}[/]")
     console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
-    # "Rendered": the scan payload carries no timestamp of its own, so this is
-    # the clock of the run, not the age of the signals. Say which one it is.
+    # "Rendered": each row carries its own `generated_at` and they differ, so no
+    # single stamp dates the table. This is the clock of the run, not the age of
+    # the signals. Say which one it is.
     console.print(f"  Rendered {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
 
-    table = Table(box=box.SIMPLE, show_header=True, header_style="bold white")
-    table.add_column("#", style="dim", width=4)
-    table.add_column("Asset", style="cyan", min_width=12)
-    table.add_column("Signal", min_width=8)
-    table.add_column("Score", justify="right", min_width=7)
-    table.add_column("Regime", min_width=18)
-    table.add_column("Confidence", min_width=10)
+    # Short headers on purpose: seven columns have to fit an 80-column terminal.
+    # Signal and regime never wrap, because a cut enum value is a lost reading;
+    # when space runs out, the asset name wraps instead. The legend below spells
+    # out the two headers that need it.
+    table = Table(box=box.SIMPLE, show_header=True, header_style="bold white", pad_edge=False)
+    table.add_column("#", style="dim")
+    table.add_column("Asset", style="cyan")
+    table.add_column("Signal", no_wrap=True)
+    table.add_column("Prox.", justify="right")
+    table.add_column("Evid.", justify="right")
+    table.add_column("Regime", no_wrap=True)
+    table.add_column("Conf.")
 
     for i, r in enumerate(results, 1):
-        signal = r.get("final_signal", "—")
-        score = r.get("final_score", 0)
-        regime = r.get("market_regime", "—")
-        confidence = r.get("confidence", {})
+        signal = r.get("signal") or "—"
+        regime = r.get("market_regime") or "—"
+        confidence = r.get("confidence")
         label = confidence.get("label", "—") if confidence else "—"
         c_color = CONFIDENCE_COLORS.get(label, "white")
         s_color = SIGNAL_COLORS.get(signal, "white")
 
         table.add_row(
             str(i),
-            f"{r.get('name', r.get('id', '—'))} ({r.get('symbol', '').upper()})",
-            f"[{s_color}]{signal}[/]",
-            f"[{s_color}]{score}[/]",
-            regime,
-            f"[{c_color}]{label}[/]",
+            escape(_asset_label(r.get("asset"))),
+            f"[{s_color}]{escape(signal)}[/]",
+            _axis(r.get("threshold_proximity")),
+            _axis(r.get("evidence_weight")),
+            escape(regime),
+            f"[{c_color}]{escape(label)}[/]",
         )
 
     console.print(table)
+    # The two axes are the ranking itself, shipped so the order can be checked.
+    console.print(
+        f"  [{COLORS['muted']}]Prox.: |z| over the asset's own anomaly threshold (1.00 = firing)[/]"
+    )
+    console.print(
+        f"  [{COLORS['muted']}]Evid.: sample size behind that reading (1.00 = full)[/]"
+    )
     console.print()
 
 
@@ -394,33 +456,45 @@ def render_batch(results: list[SignalResult]) -> None:
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📦 BATCH ANALYSIS — {len(results)} assets")
     console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
-    # "Rendered": the scan payload carries no timestamp of its own, so this is
-    # the clock of the run, not the age of the signals. Say which one it is.
+    # "Rendered": each row carries its own `generated_at` and they differ, so no
+    # single stamp dates the batch. This is the clock of the run, not the age of
+    # the signals. Say which one it is.
     console.print(f"  Rendered {_now_utc()}", style=COLORS["muted"])
     console.print(_DIVIDER, style=COLORS["divider"])
 
     for r in results:
-        name = r.get("name", r.get("id", "—"))
-        symbol = r.get("symbol", "").upper()
-        sentiment = r.get("sentiment", "neutral")
-        regime = r.get("market_regime", "—")
-        confidence = r.get("confidence", {})
+        label_text = escape(_asset_label(r.get("asset")))
+        console.print()
+
+        # A symbol the engine has no signal for comes back with every field null.
+        if not r.get("available", True):
+            console.print(
+                f"  [{COLORS['coin_name']}]{label_text}[/]  "
+                f"[{COLORS['muted']}]no pre-computed signal for this asset[/]"
+            )
+            continue
+
+        signal = r.get("signal") or "—"
+        sentiment = r.get("sentiment") or "neutral"
+        regime = r.get("market_regime") or "—"
+        confidence = r.get("confidence")
         label = confidence.get("label", "—") if confidence else "—"
         score = confidence.get("score", 0.0) if confidence else 0.0
-        summary = r.get("summary", "")
+        summary = r.get("summary") or ""
         s_color = _sentiment_color(sentiment)
         c_color = CONFIDENCE_COLORS.get(label, "white")
+        sig_color = SIGNAL_COLORS.get(signal, "white")
         sentiment_icon = SENTIMENT_ICONS.get(sentiment, "➡️ ")
 
-        console.print()
         console.print(
-            f"  [{COLORS['coin_name']}]{name} ({symbol})[/]  "
-            f"{sentiment_icon} [{s_color}]{sentiment}[/]  "
-            f"[{c_color}]{label} ({score:.2f})[/]  "
-            f"[{COLORS['regime']}]{regime}[/]"
+            f"  [{COLORS['coin_name']}]{label_text}[/]  "
+            f"[{sig_color}]{escape(signal)}[/]  "
+            f"{sentiment_icon} [{s_color}]{escape(sentiment)}[/]  "
+            f"[{c_color}]{escape(label)} ({score:.2f})[/]  "
+            f"[{COLORS['regime']}]{escape(regime)}[/]"
         )
         if summary:
-            console.print(f"  [{COLORS['muted']}]{summary}[/]")
+            console.print(f"  [{COLORS['muted']}]{escape(summary)}[/]")
 
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])

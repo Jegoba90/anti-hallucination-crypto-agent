@@ -22,9 +22,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest mypy
+        run: pip install -r requirements-dev.txt
 
       # No network and no API key: every test runs against tests/fixtures.
       - name: Run tests
@@ -34,3 +32,6 @@ jobs:
       # pins no python_version.
       - name: Check types
         run: mypy .
+
+      - name: Lint
+        run: ruff check .
