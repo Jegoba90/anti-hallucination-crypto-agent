@@ -24,6 +24,18 @@ def _load_readme() -> str:
     return (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
 
 
+def _output_section() -> str:
+    """The README's Output section alone.
+
+    The README now opens with a second CLI run, so a search over the whole file
+    finds that one first: these tests once read the owned fields from the demo
+    and the corrections from the Output block, and passed by coincidence.
+    """
+    match = re.search(r"\n## Output\n(.*?)\n## ", _load_readme(), re.DOTALL)
+    assert match is not None, "README no longer has an Output section"
+    return match.group(1)
+
+
 def _load_fixture_audit_trail() -> dict:
     fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -44,7 +56,7 @@ def _block(heading: str, readme: str) -> tuple[int, str]:
 class TestReadmeOutputBlock:
     def test_owned_plus_corrected_match_the_fixture(self) -> None:
         """The block splits the sealed list in two. Nothing may be lost or invented."""
-        readme = _load_readme()
+        readme = _output_section()
 
         owned_count, owned_body = _block("Fields Python owns, never the LLM", readme)
         corrected_count, corrected_body = _block(
@@ -62,7 +74,7 @@ class TestReadmeOutputBlock:
         assert corrected_count == len(corrected), "the (N) count contradicts the list"
 
     def test_a_field_is_never_both_a_guarantee_and_a_catch(self) -> None:
-        readme = _load_readme()
+        readme = _output_section()
 
         owned = re.findall(r"🔒\s+(\S+)", _block("Fields Python owns, never the LLM", readme)[1])
         corrected = re.findall(
@@ -72,14 +84,14 @@ class TestReadmeOutputBlock:
         assert not set(owned) & set(corrected)
 
     def test_filters_fired_count_matches_the_fixture(self) -> None:
-        match = re.search(r"Filters fired \((\d+)\):", _load_readme())
+        match = re.search(r"Filters fired \((\d+)\):", _output_section())
         assert match is not None, "README no longer has a 'Filters fired' block"
 
         expected = _load_fixture_audit_trail()["filters_applied"]
         assert int(match.group(1)) == len(expected)
 
     def test_printed_hash_matches_the_fixture(self) -> None:
-        match = re.search(r"Protocol hash \(SHA-256\):\n\s*(0x[0-9a-f]{64})", _load_readme())
+        match = re.search(r"Protocol hash \(SHA-256\):\n\s*(0x[0-9a-f]{64})", _output_section())
         assert match is not None, "README no longer prints a protocol hash"
 
         assert match.group(1) == _load_fixture_audit_trail()["protocol_hash"]
@@ -100,24 +112,36 @@ def _lines_back_at_the_margin(text: str) -> list[str]:
     return [line for line in text.splitlines() if line.strip() and not line[0].isspace() and not line.startswith("─")]
 
 
-def render_readme_output() -> str:
-    """What `coin bitcoin` prints for the fixture, at the README's width.
+# The README's opening block replaces a demo GIF: the real output of a query
+# run on 2026-10-17, kept byte for byte, at the width of the terminal it was run
+# in, which is why it reads as wide as it does.
+DEMO_FIXTURE = "readme_demo_bitcoin_2026-10-17.json"
+DEMO_WIDTH = 135
 
-    Shared with whoever regenerates the README block, so the two can only be
+
+def render_cli(fixture_name: str, width: int) -> str:
+    """What `coin bitcoin` prints for a fixture at a given terminal width.
+
+    Shared with whoever regenerates a README block, so the two can only be
     produced one way.
     """
     import display.terminal
 
-    fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
+    fixture_path = Path(__file__).parent / "fixtures" / fixture_name
     data = json.loads(fixture_path.read_text(encoding="utf-8"))["data"]
     original = display.terminal.console
-    display.terminal.console = Console(width=README_WIDTH, color_system=None)
+    display.terminal.console = Console(width=width, color_system=None)
     try:
         with display.terminal.console.capture() as capture:
             display.terminal.render_insight(data, "bitcoin")
     finally:
         display.terminal.console = original
     return capture.get()
+
+
+def render_readme_output() -> str:
+    """The Output block: the production response where a filter fired."""
+    return render_cli("radar_alpha_v2.2.0.json", README_WIDTH)
 
 
 class TestReadmeOutputIsTheRealOutput:
@@ -142,3 +166,34 @@ class TestReadmeOutputIsTheRealOutput:
     def test_neither_sends_wrapped_text_back_to_the_margin(self) -> None:
         assert _lines_back_at_the_margin(render_readme_output()) == []
         assert _lines_back_at_the_margin(self._block()) == []
+
+
+class TestReadmeDemoIsARealRun:
+    """The README opened with a GIF recorded in July, on an engine three versions
+    old, which kept showing what the CLI no longer printed. It is now the text
+    of a real run, and these keep it the CLI's output for that response."""
+
+    def _block(self) -> str:
+        match = re.search(
+            r"What `python agent\.py coin bitcoin` printed on .*?\n\n```\n(.*?)```",
+            _load_readme(),
+            re.DOTALL,
+        )
+        assert match is not None, "README no longer opens with the demo block"
+        return match.group(1)
+
+    def test_the_block_says_what_the_cli_prints_for_the_capture(self) -> None:
+        assert _words(self._block()) == _words(render_cli(DEMO_FIXTURE, DEMO_WIDTH))
+
+    def test_it_keeps_its_indentation(self) -> None:
+        assert _lines_back_at_the_margin(self._block()) == []
+
+    def test_the_hash_on_show_is_the_captures_seal(self) -> None:
+        fixture = json.loads((Path(__file__).parent / "fixtures" / DEMO_FIXTURE).read_text(encoding="utf-8"))
+        seal = fixture["data"]["math_diagnostics"]["audit_trail"]["protocol_hash"]
+
+        assert seal in self._block()
+
+    def test_no_gif_is_left_behind(self) -> None:
+        assert "demo.gif" not in _load_readme()
+        assert not (_REPO_ROOT / "demo.gif").exists()

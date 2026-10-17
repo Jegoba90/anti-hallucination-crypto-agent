@@ -7,7 +7,64 @@
 ![Anti-Hallucination](https://img.shields.io/badge/Anti--Hallucination-verifiable%20seal-blueviolet?style=flat-square)
 [![Tests](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml)
 
-![demo](demo.gif)
+What `python agent.py coin bitcoin` printed on 2026-10-17, as it came out. No
+filter fired on this one; [Output](#output) shows a real response where one did.
+
+```
+───────────────────────────────────────────────────────
+  CRYPTOCAPI RADAR — Bitcoin (BTC)
+  Analysis computed 2026-10-17 12:04:00 UTC (1 h ago)
+───────────────────────────────────────────────────────
+
+  ↔️  MARKET REGIME:   RANGING_CHOP
+  ➡️  SENTIMENT:       neutral
+  🎯 CONFIDENCE:      MEDIUM (0.63)
+  🔺 Z-SCORE:         -0.428 (no anomaly)
+  📏 BANDWIDTH:       0.0686 (band width / 20-period mean)
+
+  ANALYSIS:
+   Tensión Latente: El precio opera en la zona inferior de las Bandas de Bollinger, manteniéndose en rango sin ruptura clara. La
+   expansión de las bandas indica volatilidad moderada, pero el movimiento sigue lateral. No hay catalizador fundamental evidente; el
+   impulso es puramente técnico.
+
+  SOURCES VERIFIED (2), window 24h:
+    [Tier 1] Satoshi-era bitcoin faces a bigger quantum threat after Google’s new Willow breakthrough
+             https://www.coindesk.com/tech/2026/10/16/satoshi-era-bitcoin-faces-a-bigger-quantum-threat-after-google-s-new-willow-breakthrough
+    [Tier 2] Bitcoin Treasury Giant Strategy Faces Index Removal Under Finalized MSCI Rules
+             https://decrypt.co/381168/bitcoin-treasury-giant-strategy-faces-index-removal-under-finalized-msci-rules
+
+───────────────────────────────────────────────────────
+  🛡️  ANTI-HALLUCINATION AUDIT TRAIL
+───────────────────────────────────────────────────────
+
+  Pipeline:  Radar 4-Layer Anti-Hallucination Pipeline
+  Version:   v2.4.0-radar
+  Seal type: process_seal
+             Seals the exact corrections the 4-layer pipeline applied. Text is not reproducible (LLM is non-deterministic by design).
+
+  No filters fired: the LLM's output was consistent with the math
+
+  Fields Python owns, never the LLM (5):
+    🔒  analysis.anomaly_details
+        the anomaly description. Written from the Z-Score or left empty. The AI cannot invent one
+    🔒  analysis.confidence
+        the HIGH / MEDIUM / LOW label, derived from the score, not from the AI's wording
+    🔒  analysis.sentiment_score
+        the numeric sentiment inside the report, computed from the Z-Score
+    🔒  confidence
+        how sure the call is. Derived from the math, never from how assertive the AI sounded
+    🔒  is_volatility_alert
+        the volatility flag. Raised by the Bollinger bandwidth alone
+
+  The math engine writes these on every response, whatever the LLM said.
+
+  Protocol hash (SHA-256):
+    0x4a312f6edcae9597d602721a473f84962eec9b78cc7bcfd2de3bc9372859df51
+
+───────────────────────────────────────────────────────
+  ✅ Math Override applied · seal verifiable
+───────────────────────────────────────────────────────
+```
 
 ---
 
@@ -529,6 +586,7 @@ can show it to a user as it is.
     ├── test_terminal_encoding.py   # The output survives a terminal that isn't UTF-8
     └── fixtures/
         ├── radar_alpha_v2.2.0.json # The real production insight behind the output above
+        ├── readme_demo_bitcoin_2026-10-17.json # The run the README opens with
         └── api/                    # Live captures, one per route the client calls
 ```
 

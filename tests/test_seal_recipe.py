@@ -92,6 +92,8 @@ def test_the_offline_example_prints_the_engines_hash() -> None:
         (_TESTS.parent / "docs" / "comparisons" / "2026-07-20-btc" / "radar.json", "v2.1.0-radar"),
         (_REAL_EXAMPLE, "v2.2.0-radar"),
         (_TESTS / "fixtures" / "api" / "insight_bitcoin_alpha.json", "v2.4.0-radar"),
+        # The run the README opens with: its hash is on show, so it must verify.
+        (_TESTS / "fixtures" / "readme_demo_bitcoin_2026-10-17.json", "v2.4.0-radar"),
     ],
 )
 def test_the_live_recipe_verifies_the_seal(
