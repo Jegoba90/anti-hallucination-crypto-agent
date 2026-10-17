@@ -3,4 +3,7 @@
 -r requirements.txt
 pytest>=8.0
 mypy>=1.10
-ruff>=0.5
+# Pinned, unlike the rest: ruff widens its default rule set between releases
+# (0.17 added B008, BLE001, UP017 and more), so a floating version turns the
+# CI red on code nobody touched. Move the pin on purpose, fixing what it flags.
+ruff==0.14.9
