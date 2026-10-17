@@ -24,7 +24,7 @@ def _render(data: InsightData) -> str:
 
 
 def _load_fixture() -> InsightData:
-    fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
+    fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     return fixture["data"]
 
@@ -35,8 +35,9 @@ class TestSourcesAreRendered:
 
         assert "SOURCES VERIFIED (1)" in out
         assert "window 24h" in out
-        assert "Tier 1" in out
-        assert "Bitcoin holds above key support" in out
+        assert "Tier 2" in out
+        assert "Bitcoin Miner Ditches Site for AI Deal" in out
+        assert "https://decrypt.co/377363/bitcoin-mine-ai-deal-1-2-billion" in out
 
     def test_missing_sources_are_flagged_not_hidden(self) -> None:
         data = _load_fixture()

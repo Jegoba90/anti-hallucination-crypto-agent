@@ -25,7 +25,7 @@ def _load_readme() -> str:
 
 
 def _load_fixture_audit_trail() -> dict:
-    fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
+    fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     return fixture["data"]["math_diagnostics"]["audit_trail"]
 
@@ -98,7 +98,7 @@ class TestReadmeOutputIsTheRealOutput:
         match = re.search(r"## Output\n\n```\n(.*?)```", _load_readme(), re.DOTALL)
         assert match is not None, "README no longer has an Output block"
 
-        fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
+        fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))["data"]
         with console.capture() as capture:
             render_insight(data, "bitcoin")

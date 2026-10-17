@@ -5,7 +5,7 @@ the evidence behind the README's comparison table. A reader who checks one and
 finds the digest does not reproduce has been handed, by an anti-hallucination
 project, exactly the thing it exists to catch.
 
-The rest of the suite hashes `tests/fixtures/sample_response.json`. Nothing
+The rest of the suite hashes `tests/fixtures/radar_alpha_v2.2.0.json`. Nothing
 covered the published captures, so an edit to one (a refreshed capture, a fixed
 typo in a headline) would break the evidence in silence. These tests close that,
 and they glob rather than name a file so the next comparison folder is covered

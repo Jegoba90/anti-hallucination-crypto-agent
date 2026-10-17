@@ -31,13 +31,16 @@ def _render(data: InsightData) -> str:
 
 
 def _load_fixture() -> InsightData:
-    fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
+    fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     return fixture["data"]
 
 
 def _with_calculated_at(raw: str | None) -> InsightData:
+    """The fixture dated only by its seal. It also carries `generated_at`, which
+    the header prefers, so that goes: these cases exercise the seal's stamp."""
     data = _load_fixture()
+    data.pop("generated_at", None)
     trail = data["math_diagnostics"]["audit_trail"]
     if raw is None:
         trail.pop("calculated_at", None)
@@ -47,12 +50,12 @@ def _with_calculated_at(raw: str | None) -> InsightData:
 
 
 class TestHeaderShowsTheAnalysisTime:
-    def test_header_prints_calculated_at_not_the_wall_clock(self) -> None:
+    def test_header_prints_the_engines_stamp_not_the_wall_clock(self) -> None:
         out = _render(_load_fixture())
 
-        # The fixture was computed on 2026-06-17. Whenever this suite runs, that
+        # The fixture was computed on 2026-09-03. Whenever this suite runs, that
         # is the date that must appear.
-        assert "Analysis computed 2026-06-17 23:19:21 UTC" in out
+        assert "Analysis computed 2026-09-03 23:04:24 UTC" in out
 
     def test_the_render_clock_never_reaches_the_screen(self) -> None:
         out = _render(_load_fixture())
@@ -85,9 +88,10 @@ class TestHeaderNeverInventsATime:
         assert "no analysis timestamp" in out
         assert "Analysis computed" not in out
 
-    def test_pulse_view_without_audit_trail_does_not_crash(self) -> None:
+    def test_pulse_view_without_any_stamp_does_not_crash(self) -> None:
         data = _load_fixture()
         del data["math_diagnostics"]["audit_trail"]
+        data.pop("generated_at", None)
 
         out = _render(data)
 
@@ -136,6 +140,6 @@ class TestGeneratedAtIsTheAnalysisAge:
         assert "(" not in header_line
 
     def test_naive_stamp_is_read_as_utc_not_as_local_time(self) -> None:
-        out = _render(_with_calculated_at("2026-06-17T23:19:21.370718"))
+        out = _render(_with_calculated_at("2026-09-03T23:04:24.207146"))
 
-        assert "Analysis computed 2026-06-17 23:19:21 UTC" in out
+        assert "Analysis computed 2026-09-03 23:04:24 UTC" in out

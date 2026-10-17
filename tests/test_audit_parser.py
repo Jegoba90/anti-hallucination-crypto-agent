@@ -17,7 +17,7 @@ from cryptocapi.models import AuditTrail
 
 
 def _load_fixture() -> dict:
-    fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
+    fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
     return json.loads(fixture_path.read_text())
 
 
@@ -30,18 +30,16 @@ class TestParseAuditTrail:
         assert summary.is_pro is True
         assert summary.seal_type == "process_seal"
         assert summary.algorithm_id == "Radar 4-Layer Anti-Hallucination Pipeline"
-        assert summary.engine_version == "v2.1.0-radar"
-        assert summary.sentiment_override is True
+        assert summary.engine_version == "v2.2.0-radar"
+        assert summary.sentiment_override is False
 
     def test_filters_parsed_correctly(self) -> None:
         fixture = _load_fixture()
         audit_trail: AuditTrail = fixture["data"]["math_diagnostics"]["audit_trail"]
         summary = parse_audit_trail(audit_trail)
 
-        assert len(summary.filters) == 2
-        filter_names = [f[0] for f in summary.filters]
-        assert "LEY 7 volume" in filter_names
-        assert "band position CENTRO_BANDAS" in filter_names
+        assert [name for name, _ in summary.filters] == ["LEY 7 volume"]
+        assert all(explanation for _, explanation in summary.filters)
 
     def test_fields_overridden_present(self) -> None:
         fixture = _load_fixture()
@@ -49,7 +47,16 @@ class TestParseAuditTrail:
         summary = parse_audit_trail(audit_trail)
 
         assert "confidence" in summary.fields_overridden
-        assert "sentiment" in summary.fields_overridden
+        assert "analysis.detailed_report" in summary.fields_overridden
+
+    def test_the_one_catch_in_the_real_seal_is_the_report(self) -> None:
+        """Five fields Python always owns, and one the filter actually rewrote."""
+        fixture = _load_fixture()
+        audit_trail: AuditTrail = fixture["data"]["math_diagnostics"]["audit_trail"]
+        summary = parse_audit_trail(audit_trail)
+
+        assert [name for name, _ in summary.fields_corrected] == ["analysis.detailed_report"]
+        assert len(summary.fields_owned) == 5
 
     def test_protocol_hash_correct(self) -> None:
         fixture = _load_fixture()
@@ -197,18 +204,18 @@ class TestVerifyHashFormat:
 
 
 class TestHashReproducibility:
-    """Reproduce the protocol_hash from the response exactly like a third party
-    would — pulling z_score/market_regime from math_diagnostics, sentiment from
-    the root, and filters/fields from the audit_trail.
+    """Reproduce the protocol_hash of a real, engine-issued seal like a third
+    party would: z_score/market_regime from math_diagnostics, sentiment from the
+    root, filters and fields from the audit_trail.
 
-    What this pins is the README's arithmetic, not the engine: the fixture is the
-    README's illustrative example, and its hash was computed from it with this
-    same recipe, so these tests could never notice the engine sealing another
-    way. That is how the 2026-09-01 rule change went unseen for six weeks. Real
-    seals, on both sides of that change, run in test_seal_recipe.py.
+    The fixture is a production response (2026-09-03, `v2.2.0-radar`), so this
+    checks the engine, not our own arithmetic. An earlier fixture was written for
+    the README and its hash computed with the same recipe; it could never notice
+    the engine sealing another way, and the 2026-09-01 rule change went unseen
+    for six weeks. The README's two recipes run as written in test_seal_recipe.py.
     """
 
-    def test_recomputed_hash_matches_fixture(self) -> None:
+    def test_recomputed_hash_matches_the_engines_seal(self) -> None:
         fixture = _load_fixture()
         data = fixture["data"]
         math = data["math_diagnostics"]
@@ -217,7 +224,8 @@ class TestHashReproducibility:
         payload = {
             "algorithm_id": trail["algorithm_id"],
             "engine_version": trail["engine_version"],
-            "z_score": math["z_score"],
+            # From v2.2.0-radar every number is sealed as a 6-decimal string.
+            "z_score": format(math["z_score"], ".6f"),
             "market_regime": math["market_regime"],
             "sentiment": data["sentiment"],
             "sentiment_override": trail["sentiment_override"],
@@ -227,29 +235,5 @@ class TestHashReproducibility:
         serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         recomputed = "0x" + hashlib.sha256(serialized.encode()).hexdigest()
 
+        assert trail["engine_version"] == "v2.2.0-radar"
         assert recomputed == trail["protocol_hash"]
-
-    def test_readme_snippet_produces_documented_hash(self) -> None:
-        """The exact dict published in the README must produce the documented hash."""
-        payload = {
-            "algorithm_id": "Radar 4-Layer Anti-Hallucination Pipeline",
-            "engine_version": "v2.1.0-radar",
-            "z_score": -0.6367,
-            "market_regime": "RANGING_CHOP",
-            "sentiment": "neutral",
-            "sentiment_override": True,
-            "filters_applied": ["LEY 7 volume", "band position CENTRO_BANDAS"],
-            "fields_overridden": [
-                "analysis.anomaly_details",
-                "analysis.confidence",
-                "analysis.detailed_report",
-                "analysis.sentiment_score",
-                "confidence",
-                "is_volatility_alert",
-                "sentiment",
-            ],
-        }
-        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        digest = "0x" + hashlib.sha256(serialized.encode()).hexdigest()
-
-        assert digest == "0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63"
