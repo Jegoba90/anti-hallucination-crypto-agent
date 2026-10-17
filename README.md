@@ -8,7 +8,10 @@
 [![Tests](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml)
 
 What `python agent.py coin bitcoin` printed on 2026-10-17, as it came out. No
-filter fired on this one; [Output](#output) shows a real response where one did.
+filter fired on this one: the AI's text agreed with the math. The date under the
+coin name is when the engine computed the analysis, not when the command ran.
+[Verify the Hash Yourself](#verify-the-hash-yourself) works through a real
+response where a filter did fire.
 
 ```
 ───────────────────────────────────────────────────────
@@ -143,76 +146,6 @@ own. You'll see the analysis **and** the audit trail of what the math corrected.
 > Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com).
 > Then `cp .env.example .env` (Windows cmd: `copy .env.example .env`) and set
 > `CRYPTOCAPI_API_KEY=sk_live_...` in it.
-
----
-
-## Output
-
-The run at the top of this page is a quiet one: the AI's text agreed with the
-math, so nothing was cut. When something is, the audit trail says what and
-why. This is that block from a real response where it happened: bitcoin,
-2026-09-03 (`v2.2.0-radar`), published in
-[CryptoCapi-Portfolio](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/api/examples/radar-alpha.json)
-and kept byte for byte in `tests/fixtures/radar_alpha_v2.2.0.json`. The rest of
-its screen has the same shape as the run at the top.
-
-```
-───────────────────────────────────────────────────────
-  🛡️  ANTI-HALLUCINATION AUDIT TRAIL
-───────────────────────────────────────────────────────
-
-  Pipeline:  Radar 4-Layer Anti-Hallucination Pipeline
-  Version:   v2.2.0-radar
-  Seal type: process_seal
-             Seals the exact corrections the 4-layer pipeline applied. Text is
-             not reproducible (LLM is non-deterministic by design).
-
-  Filters fired (1):
-    ✂️  [LEY 7 volume]  Removed a volume claim: Radar has no volume trend to
-                        back it
-
-  Corrections applied to the LLM's output (1):
-    ✏️  analysis.detailed_report
-        the lexical filters rewrote the narrative
-
-  Fields Python owns, never the LLM (5):
-    🔒  analysis.anomaly_details
-        the anomaly description. Written from the Z-Score or left empty. The
-        AI cannot invent one
-    🔒  analysis.confidence
-        the HIGH / MEDIUM / LOW label, derived from the score, not from the
-        AI's wording
-    🔒  analysis.sentiment_score
-        the numeric sentiment inside the report, computed from the Z-Score
-    🔒  confidence
-        how sure the call is. Derived from the math, never from how assertive
-        the AI sounded
-    🔒  is_volatility_alert
-        the volatility flag. Raised by the Bollinger bandwidth alone
-
-  The math engine writes these on every response, whatever the LLM said.
-
-  Protocol hash (SHA-256):
-    0x4440a68517f2929f7c73a90835b8624f8f9861b6d43dca3c37646d351e4de18c
-
-───────────────────────────────────────────────────────
-  ✅ Math Override applied · seal verifiable
-───────────────────────────────────────────────────────
-```
-
-One filter fired and the report was rewritten, which is why there is a
-correction next to the five fields Python always owns. The seal was issued by
-the engine, and the recipes in [Verify the Hash Yourself](#verify-the-hash-yourself)
-reproduce it. The engine has moved on since: `v2.4.0-radar` removes any
-sentence that mentions volume, in the summary too, and lists `summary` in the
-seal when it cut one from there.
-
-The date under the coin name, in the run at the top, is when the engine
-computed the analysis (the response's `generated_at`, or the seal's
-`calculated_at` in older responses), not the moment you ran the command. The
-collector refreshes on a cron, so the header reports the age of the analysis
-rather than the age of your terminal session. A response that carries no stamp
-says so instead of borrowing your clock.
 
 ---
 
@@ -360,14 +293,19 @@ it as such. The other entries are conditional, and those are the real catches:
 `sentiment` shows up only when the Z-Score rule overrode the LLM's verdict,
 `analysis.detailed_report` only when a lexical filter cut text out of it, and,
 since `v2.4.0-radar`, `summary` only when LEY 7 cut a volume claim out of the
-summary. The response in [Output](#output) has one of them, the report, which is
-why it seals six.
+summary.
 
-The seal hashes the raw union of the six, exactly as the API ships it.
+The example below is a real response where a filter did fire, unlike the run at
+the top: bitcoin, 2026-09-03 (`v2.2.0-radar`), published in
+[CryptoCapi-Portfolio](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/api/examples/radar-alpha.json)
+and kept byte for byte in `tests/fixtures/radar_alpha_v2.2.0.json`. LEY 7 cut a
+volume claim and the report was rewritten, so it has one conditional entry, the
+report, and seals six. The seal hashes the raw union of the six, exactly as the
+API ships it.
 
-This is the exact payload behind the audit trail in [Output](#output), the eight
-fields copied from that response. Run it and you get the hash the engine issued, with no
-dependencies and no CryptoCapi account needed. One detail: from `v2.2.0-radar`
+These are its eight sealed fields, copied from the response. Run them and you
+get the hash the engine issued, with no dependencies and no CryptoCapi account
+needed. One detail: from `v2.2.0-radar`
 the engine seals every number as a string with exactly 6 decimals, so the
 `z_score` of `2.2794` goes in as `"2.279400"` (the next section explains why):
 
@@ -545,7 +483,7 @@ can show it to a user as it is.
 │   └── batch_compare.py   # BTC vs ETH side by side (any coins with a trial key)
 └── tests/
     ├── test_audit_parser.py        # Parser + hash reproducibility
-    ├── test_readme_consistency.py  # The Output block is what the CLI prints for the fixture
+    ├── test_readme_consistency.py  # The one CLI screen is what the CLI prints for its capture
     ├── test_seal_recipe.py         # The live recipe above, run as written, verifies real seals
     ├── test_published_evidence.py  # The sealed captures in docs/comparisons still verify
     ├── test_client_contract.py     # The client reads what the live API actually sends
@@ -560,7 +498,7 @@ can show it to a user as it is.
     ├── test_pro_required.py        # The Quant plan gate reads as an offer, not an HTTP error
     ├── test_terminal_encoding.py   # The output survives a terminal that isn't UTF-8
     └── fixtures/
-        ├── radar_alpha_v2.2.0.json # The real response behind the Output section
+        ├── radar_alpha_v2.2.0.json # The real response behind the offline hash example
         ├── readme_demo_bitcoin_2026-10-17.json # The run the README opens with
         └── api/                    # Live captures, one per route the client calls
 ```
