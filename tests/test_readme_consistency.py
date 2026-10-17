@@ -28,7 +28,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 # The real query the README shows, kept byte for byte, and the width of the
 # terminal it was run in, which is why the screen reads as wide as it does.
 DEMO_FIXTURE = "readme_demo_bitcoin_2026-10-17.json"
-DEMO_WIDTH = 135
+DEMO_WIDTH = 133
 
 
 def _load_readme() -> str:

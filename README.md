@@ -8,16 +8,15 @@
 [![Tests](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml)
 
 What `python agent.py coin bitcoin` prints for the bitcoin analysis of 2026-10-17
-12:04 UTC, kept byte for byte. No filter fired on this one: the AI's text agreed
-with the math. The date under the coin name is when the engine computed the
+14:02 UTC, kept byte for byte. On this one the engine caught the AI: LEY 7 cut a
+claim about volume, which Radar has no volume trend to back, and the report was
+rewritten. The date under the coin name is when the engine computed the
 analysis, not when the command ran, and the seal is recomputed on the spot.
-[Verify the Hash Yourself](#verify-the-hash-yourself) works through a real
-response where a filter did fire.
 
 ```
 ───────────────────────────────────────────────────────
   CRYPTOCAPI RADAR — Bitcoin (BTC)
-  Analysis computed 2026-10-17 12:04:00 UTC (1 h ago)
+  Analysis computed 2026-10-17 14:02:25 UTC (32 min ago)
 ───────────────────────────────────────────────────────
 
   ↔️  MARKET REGIME:   RANGING_CHOP
@@ -27,9 +26,11 @@ response where a filter did fire.
   📏 BANDWIDTH:       0.0686 (band width / 20-period mean)
 
   ANALYSIS:
-   Tensión Latente: El precio opera en la zona inferior de las Bandas de Bollinger, manteniéndose en rango sin ruptura clara. La
-   expansión de las bandas indica volatilidad moderada, pero el movimiento sigue lateral. No hay catalizador fundamental evidente; el
-   impulso es puramente técnico.
+   Tensión Latente: La reciente publicación sobre el avance de Google en chips cuánticos plantea una amenaza teórica a la seguridad
+   de las billeteras, pero el impacto inmediato en el precio es limitado. El análisis técnico muestra que el activo opera en la zona
+   inferior de las Bandas de Bollinger, manteniéndose en rango sin ruptura clara. El régimen de mercado se caracteriza por
+   lateralización, con una expansión gradual de las bandas que indica una ligera apertura de volatilidad, pero sin señales de
+   ruptura.
 
   SOURCES VERIFIED (2), window 24h:
     [Tier 1] Satoshi-era bitcoin faces a bigger quantum threat after Google’s new Willow breakthrough
@@ -46,7 +47,12 @@ response where a filter did fire.
   Seal type: process_seal
              Seals the exact corrections the 4-layer pipeline applied. Text is not reproducible (LLM is non-deterministic by design).
 
-  No filters fired: the LLM's output was consistent with the math
+  Filters fired (1):
+    ✂️  [LEY 7 volume]  Removed a volume claim: Radar has no volume trend to back it
+
+  Corrections applied to the LLM's output (1):
+    ✏️  analysis.detailed_report
+        the lexical filters rewrote the narrative
 
   Fields Python owns, never the LLM (5):
     🔒  analysis.anomaly_details
@@ -63,7 +69,7 @@ response where a filter did fire.
   The math engine writes these on every response, whatever the LLM said.
 
   Protocol hash (SHA-256):
-    0x4a312f6edcae9597d602721a473f84962eec9b78cc7bcfd2de3bc9372859df51
+    0x53e6680028c78b24e111fbca63639039f087dadd8e9925284bba72fbceec4138
     ✓ recomputed here from this response: it matches (the response is the one that was sealed; an unkeyed hash cannot say who sealed
     it)
 
@@ -298,8 +304,8 @@ it as such. The other entries are conditional, and those are the real catches:
 since `v2.4.0-radar`, `summary` only when LEY 7 cut a volume claim out of the
 summary.
 
-The example below is a real response where a filter did fire, unlike the run at
-the top: bitcoin, 2026-09-03 (`v2.2.0-radar`), published in
+The example below is a real response where a filter fired, like the run at the
+top, sealed under the earlier engine: bitcoin, 2026-09-03 (`v2.2.0-radar`), published in
 [CryptoCapi-Portfolio](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/api/examples/radar-alpha.json)
 and kept byte for byte in `tests/fixtures/radar_alpha_v2.2.0.json`. LEY 7 cut a
 volume claim and the report was rewritten, so it has one conditional entry, the
