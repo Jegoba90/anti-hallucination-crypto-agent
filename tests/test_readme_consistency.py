@@ -89,10 +89,15 @@ class TestReadmeOutputBlock:
 README_WIDTH = 78
 
 
-def _lines(text: str) -> list[str]:
-    """Lines as a reader sees them: trailing spaces and the live age aside."""
-    text = re.sub(r"\(\d+ (?:min|h|d) ago\)", "(… ago)", text)
-    return [line.rstrip() for line in text.strip("\n").splitlines()]
+def _words(text: str) -> list[str]:
+    """The content, word by word: line breaks and the live age aside."""
+    return re.sub(r"\(\d+ (?:min|h|d) ago\)", "", text).split()
+
+
+def _lines_back_at_the_margin(text: str) -> list[str]:
+    """Lines that start at column 0 and are not a divider: wrapped text that lost
+    its indentation, which is how the CLI printed long lines before."""
+    return [line for line in text.splitlines() if line.strip() and not line[0].isspace() and not line.startswith("─")]
 
 
 def render_readme_output() -> str:
@@ -116,13 +121,24 @@ def render_readme_output() -> str:
 
 
 class TestReadmeOutputIsTheRealOutput:
-    def test_the_block_is_what_the_cli_prints_for_the_fixture(self) -> None:
-        """Line for line, indentation included. The block once lagged the
-        renderer (no SOURCES section for months), and once showed wrapped text
-        neatly aligned while the CLI sent it back to the margin; comparing words
-        alone caught the first and missed the second. Only the age in the
-        header, which depends on the day the suite runs, may differ."""
+    """The block once lagged the renderer (no SOURCES section for months), and
+    once showed wrapped text neatly aligned while the CLI sent it back to the
+    margin. Comparing words catches the first; the margin check, the second.
+
+    Exact column positions are not compared, on purpose: they depend on the
+    installed Rich, which measures emoji differently (13.7 counts "✂️" as one
+    cell, 15 as two), so the floors job in CI would fail on a README that is
+    right for the version a fresh install gets.
+    """
+
+    def _block(self) -> str:
         match = re.search(r"## Output\n\n```\n(.*?)```", _load_readme(), re.DOTALL)
         assert match is not None, "README no longer has an Output block"
+        return match.group(1)
 
-        assert _lines(match.group(1)) == _lines(render_readme_output())
+    def test_the_block_says_what_the_cli_prints_for_the_fixture(self) -> None:
+        assert _words(self._block()) == _words(render_readme_output())
+
+    def test_neither_sends_wrapped_text_back_to_the_margin(self) -> None:
+        assert _lines_back_at_the_margin(render_readme_output()) == []
+        assert _lines_back_at_the_margin(self._block()) == []
