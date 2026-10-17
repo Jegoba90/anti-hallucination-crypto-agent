@@ -7,9 +7,10 @@
 ![Anti-Hallucination](https://img.shields.io/badge/Anti--Hallucination-verifiable%20seal-blueviolet?style=flat-square)
 [![Tests](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml)
 
-What `python agent.py coin bitcoin` printed on 2026-10-17, as it came out. No
-filter fired on this one: the AI's text agreed with the math. The date under the
-coin name is when the engine computed the analysis, not when the command ran.
+What `python agent.py coin bitcoin` prints for the bitcoin analysis of 2026-10-17
+12:04 UTC, kept byte for byte. No filter fired on this one: the AI's text agreed
+with the math. The date under the coin name is when the engine computed the
+analysis, not when the command ran, and the seal is recomputed on the spot.
 [Verify the Hash Yourself](#verify-the-hash-yourself) works through a real
 response where a filter did fire.
 
@@ -63,9 +64,11 @@ response where a filter did fire.
 
   Protocol hash (SHA-256):
     0x4a312f6edcae9597d602721a473f84962eec9b78cc7bcfd2de3bc9372859df51
+    ✓ recomputed here from this response: it matches (the response is the one that was sealed; an unkeyed hash cannot say who sealed
+    it)
 
 ───────────────────────────────────────────────────────
-  ✅ Math Override applied · seal verifiable
+  ✅ Math Override applied · seal verified
 ───────────────────────────────────────────────────────
 ```
 
@@ -388,6 +391,14 @@ print(digest == trail["protocol_hash"])
 If it prints `True`, the response is internally consistent: the corrections listed
 in the trail are exactly the ones the digest was computed over.
 
+The CLI runs this same recipe on every response it shows (`cryptocapi/seal.py`)
+and says what it found: verified, does not match (the command then exits
+non-zero), or not checked, for a response without a seal or an engine version
+newer than the agent knows, whose rule may have changed. It never calls a seal
+wrong when it is the agent that fell behind. Run the recipe yourself anyway: a
+check made by the agent is the agent vouching for itself, and the recipe needs
+nothing from this repo.
+
 The full recipe for all three engines, with a JavaScript reference implementation
 and every version boundary, is in
 [SEAL.md](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/docs/SEAL.md).
@@ -417,7 +428,7 @@ The `cryptocapi/` package is designed to be copied directly into your project:
 
 ```python
 import asyncio
-from cryptocapi import CryptoCapiClient, parse_audit_trail
+from cryptocapi import CryptoCapiClient, check_seal, parse_audit_trail
 
 async def main():
     # "demo_btc_eth_public" works out of the box for BTC/ETH; use your
@@ -443,6 +454,9 @@ async def main():
         print(f"Filters fired: {[f[0] for f in audit.filters]}")
         print(f"Fields Python overrode: {audit.fields_overridden}")
         print(f"Hash: {audit.protocol_hash}")
+
+    # Recompute the seal from this response: integrity, not origin
+    print(check_seal(data).status)                     # SealStatus.VERIFIED
 
 asyncio.run(main())
 ```
@@ -472,7 +486,8 @@ can show it to a user as it is.
 ├── cryptocapi/
 │   ├── client.py          # Async HTTP client: copy this into your project
 │   ├── models.py          # TypedDicts for full API response
-│   └── audit.py           # Audit trail parser + filter explanations
+│   ├── audit.py           # Audit trail parser + filter explanations
+│   └── seal.py            # Recomputes the seal of every response it is handed
 ├── display/
 │   ├── terminal.py        # Rich terminal renderer
 │   └── themes.py          # Color scheme
@@ -485,6 +500,7 @@ can show it to a user as it is.
     ├── test_audit_parser.py        # Parser + hash reproducibility
     ├── test_readme_consistency.py  # The one CLI screen is what the CLI prints for its capture
     ├── test_seal_recipe.py         # The live recipe above, run as written, verifies real seals
+    ├── test_seal_check.py          # The CLI checks every seal it shows, and never accuses blindly
     ├── test_published_evidence.py  # The sealed captures in docs/comparisons still verify
     ├── test_client_contract.py     # The client reads what the live API actually sends
     ├── test_cli.py                 # Watch mode flags sentiment flips; impossible flags fail loudly

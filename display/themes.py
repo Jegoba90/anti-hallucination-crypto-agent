@@ -9,6 +9,7 @@ COLORS: dict[str, str] = {
     "filter_fired": "yellow",
     "field_overridden": "cyan",
     "seal_ok": "bold green",
+    "seal_bad": "bold red",
     "divider": "dim white",
     "warning": "bold yellow",
     "muted": "dim",

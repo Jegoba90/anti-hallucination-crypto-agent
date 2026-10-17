@@ -14,6 +14,7 @@ from cryptocapi.client import (
     ProEngineRequired,
     resolve_api_key,
 )
+from cryptocapi.seal import SealStatus
 from display.terminal import (
     console,
     render_batch,
@@ -98,6 +99,7 @@ def coin(
 
         last_sentiment: str | None = None
         while True:
+            seal_mismatch = False
             try:
                 data = await client.get_insight(coin_id)
                 if data is None:
@@ -105,7 +107,8 @@ def coin(
                     # yet. A one-shot run exits 0; --watch waits for one.
                     render_no_analysis(coin_id)
                 else:
-                    render_insight(data, coin_id)
+                    check = render_insight(data, coin_id)
+                    seal_mismatch = check.status is SealStatus.MISMATCH
                     sentiment = data.get("sentiment")
                     # The flip is what --watch is for. It goes after the render so
                     # it is the last thing on screen while the next wait runs.
@@ -126,6 +129,11 @@ def coin(
                     raise typer.Exit(1)
 
             if not watch:
+                # A seal that does not match is the one outcome a script must
+                # never read as success. Raised here, outside the try: inside it,
+                # `except Exception` would catch the Exit as an error.
+                if seal_mismatch:
+                    raise typer.Exit(1)
                 break
 
             console.print(

@@ -69,7 +69,7 @@ def render_cli(fixture_name: str, width: int) -> str:
 class TestReadmeScreenIsARealRun:
     def _block(self) -> str:
         match = re.search(
-            r"What `python agent\.py coin bitcoin` printed on .*?\n\n```\n(.*?)```",
+            r"What `python agent\.py coin bitcoin` prints for .*?\n\n```\n(.*?)```",
             _load_readme(),
             re.DOTALL,
         )

@@ -61,3 +61,75 @@ class TestErrorsAreText:
             render_error("CryptoCapi answered 400: [/] is not a coin id")
 
         assert "[/] is not a coin id" in capture.get()
+
+
+_ESC = chr(27)
+# What a hostile headline could carry: erase the line, rewind, print a fake
+# verdict in green, and hide a link. None of it may reach the terminal.
+_INJECTED = f"Headline{_ESC}[2K{chr(13)}{_ESC}[32m  SEAL VERIFIED{_ESC}[0m"
+
+
+def _on_a_terminal(monkeypatch, draw) -> str:
+    """Render as a real terminal receives it, escape codes included."""
+    import io
+
+    import display.terminal
+    from rich.console import Console
+
+    buffer = io.StringIO()
+    monkeypatch.setattr(
+        display.terminal,
+        "console",
+        Console(file=buffer, force_terminal=True, color_system="truecolor", width=100, legacy_windows=False),
+    )
+    draw(display.terminal)
+    return buffer.getvalue()
+
+
+def _assert_nothing_injected(out: str) -> None:
+    assert f"{_ESC}[2K" not in out
+    assert f"{_ESC}[32m  SEAL VERIFIED" not in out
+    assert f"{_ESC}]8;;evil" not in out
+    assert chr(13) not in out
+
+
+class TestControlCharactersNeverReachTheTerminal:
+    """Rich's escape() covers its markup, not the terminal's. A news headline
+    carrying ESC sequences reached the screen raw, and one built for it erased
+    its own line and printed a green "SEAL VERIFIED" nothing had verified."""
+
+    def test_a_source_title_and_url(self, monkeypatch) -> None:
+        data = _insight(
+            analysis={
+                "sources_verified": [
+                    {"title": _INJECTED, "url": f"https://x.test/{_ESC}]8;;evil", "credibility": "Tier 1"}
+                ]
+            }
+        )
+
+        out = _on_a_terminal(monkeypatch, lambda t: t.render_insight(data, "bitcoin"))
+
+        _assert_nothing_injected(out)
+        assert "Headline" in out
+
+    def test_the_narrative(self, monkeypatch) -> None:
+        data = _insight(analysis={"detailed_report": _INJECTED}, summary=_INJECTED)
+
+        _assert_nothing_injected(_on_a_terminal(monkeypatch, lambda t: t.render_insight(data, "bitcoin")))
+
+    def test_a_filter_name(self, monkeypatch) -> None:
+        data = _insight(
+            math_diagnostics={
+                "audit_trail": {"protocol_hash": "0xabc", "seal_type": "process_seal", "filters_applied": [_INJECTED]}
+            }
+        )
+
+        _assert_nothing_injected(_on_a_terminal(monkeypatch, lambda t: t.render_insight(data, "bitcoin")))
+
+    def test_an_error_quoting_the_api(self, monkeypatch) -> None:
+        _assert_nothing_injected(_on_a_terminal(monkeypatch, lambda t: t.render_error(_INJECTED)))
+
+    def test_a_batch_summary(self, monkeypatch) -> None:
+        row = {"asset": {"id": "bitcoin", "symbol": "btc"}, "available": True, "summary": _INJECTED}
+
+        _assert_nothing_injected(_on_a_terminal(monkeypatch, lambda t: t.render_batch([row])))

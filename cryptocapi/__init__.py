@@ -8,6 +8,7 @@ from .client import (
     UnexpectedResponse,
     resolve_api_key,
 )
+from .seal import SealCheck, SealStatus, check_seal
 from .models import (
     AuditTrail,
     InsightData,
@@ -27,6 +28,9 @@ __all__ = [
     "PriceItem",
     "MarketSummary",
     "parse_audit_trail",
+    "check_seal",
+    "SealCheck",
+    "SealStatus",
     "resolve_api_key",
     "AuditSummary",
     # The four things the client raises. This package is meant to be copied into
