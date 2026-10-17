@@ -156,16 +156,31 @@ class TestReadmeOutputIsTheRealOutput:
     """
 
     def _block(self) -> str:
-        match = re.search(r"## Output\n\n```\n(.*?)```", _load_readme(), re.DOTALL)
-        assert match is not None, "README no longer has an Output block"
+        match = re.search(r"```\n(.*?)```", _output_section(), re.DOTALL)
+        assert match is not None, "README's Output section no longer has a block"
         return match.group(1)
 
+    @staticmethod
+    def _audit_trail(rendered: str) -> str:
+        """The audit block of a render, from the divider above its title to the end.
+
+        The Output section shows only this part: the full screen of a run is
+        already at the top of the README, and showing two would repeat it.
+        """
+        lines = rendered.splitlines()
+        title = next(i for i, line in enumerate(lines) if "ANTI-HALLUCINATION AUDIT TRAIL" in line)
+        return "\n".join(lines[title - 1 :])
+
     def test_the_block_says_what_the_cli_prints_for_the_fixture(self) -> None:
-        assert _words(self._block()) == _words(render_readme_output())
+        assert _words(self._block()) == _words(self._audit_trail(render_readme_output()))
 
     def test_neither_sends_wrapped_text_back_to_the_margin(self) -> None:
         assert _lines_back_at_the_margin(render_readme_output()) == []
         assert _lines_back_at_the_margin(self._block()) == []
+
+    def test_the_readme_shows_one_full_run_not_two(self) -> None:
+        """The opening run and the Output section once both printed a whole screen."""
+        assert _load_readme().count("CRYPTOCAPI RADAR —") == 1
 
 
 class TestReadmeDemoIsARealRun:

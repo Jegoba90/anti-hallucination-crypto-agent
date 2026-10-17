@@ -148,36 +148,15 @@ own. You'll see the analysis **and** the audit trail of what the math corrected.
 
 ## Output
 
+The run at the top of this page is a quiet one: the AI's text agreed with the
+math, so nothing was cut. When something is, the audit trail says what and
+why. This is that block from a real response where it happened: bitcoin,
+2026-09-03 (`v2.2.0-radar`), published in
+[CryptoCapi-Portfolio](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/api/examples/radar-alpha.json)
+and kept byte for byte in `tests/fixtures/radar_alpha_v2.2.0.json`. The rest of
+its screen has the same shape as the run at the top.
+
 ```
-───────────────────────────────────────────────────────
-  CRYPTOCAPI RADAR — Bitcoin (BTC)
-  Analysis computed 2026-09-03 23:04:24 UTC (43 d ago)
-───────────────────────────────────────────────────────
-
-  📈 MARKET REGIME:   BULLISH_TREND
-  📈 SENTIMENT:       bullish
-  🎯 CONFIDENCE:      HIGH (0.95)
-  🔺 Z-SCORE:         2.279 (no anomaly)
-  📏 BANDWIDTH:       0.3225 (band width / 20-period mean)
-
-  ANALYSIS:
-   El estado de las bandas indica COMPRESIÓN activa, sugiriendo acumulación de
-   energía volátil previa a una posible expansión direccional. El Z-Score
-   positivo confirma la fortaleza relativa del precio frente a la media móvil.
-   En el frente macroestructural, se observa un pivote significativo en la
-   industria minera: operadores como Hyperscale están desmantelando
-   infraestructura de Bitcoin para contratos de Inteligencia Artificial de
-   alto valor. Este fenómeno representa una reasignación estructural de
-   capital y energía a largo plazo, aunque el impacto inmediato en la oferta
-   circulante es marginal. La acción del precio actual responde a dinámicas
-   técnicas de ruptura, mientras el fundamento sectorial evoluciona hacia la
-   diversificación energética.
-
-  SOURCES VERIFIED (1), window 24h:
-    [Tier 2] Bitcoin Miner Ditches Site for AI Deal That Could Top $1.2
-             Billion
-             https://decrypt.co/377363/bitcoin-mine-ai-deal-1-2-billion
-
 ───────────────────────────────────────────────────────
   🛡️  ANTI-HALLUCINATION AUDIT TRAIL
 ───────────────────────────────────────────────────────
@@ -221,24 +200,19 @@ own. You'll see the analysis **and** the audit trail of what the math corrected.
 ───────────────────────────────────────────────────────
 ```
 
-The date under the coin name is when the engine computed the analysis (the
-response's `generated_at`, or the seal's `calculated_at` in older responses), not
-the moment you ran the command. The collector refreshes on a cron, so the header
-reports the age of the analysis rather than the age of your terminal session. A
-response that carries no stamp says so instead of borrowing your clock.
+One filter fired and the report was rewritten, which is why there is a
+correction next to the five fields Python always owns. The seal was issued by
+the engine, and the recipes in [Verify the Hash Yourself](#verify-the-hash-yourself)
+reproduce it. The engine has moved on since: `v2.4.0-radar` removes any
+sentence that mentions volume, in the summary too, and lists `summary` in the
+seal when it cut one from there.
 
-The response behind this block is real: a production Radar insight for bitcoin
-from 2026-09-03 (`v2.2.0-radar`), published in
-[CryptoCapi-Portfolio](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/api/examples/radar-alpha.json)
-and kept byte for byte in `tests/fixtures/radar_alpha_v2.2.0.json`. The seal in
-it was issued by the engine, and the recipes below reproduce it. One filter fired
-and the report was rewritten, which is why it shows a correction; the age in the
-header is the one on the day this README was written, and it only grows.
-
-The engine has moved on since: `v2.4.0-radar` removes any sentence that
-mentions volume, in the summary too, and lists `summary` in the seal when it cut
-one from there. A response you fetch today differs in those details, not in its
-shape.
+The date under the coin name, in the run at the top, is when the engine
+computed the analysis (the response's `generated_at`, or the seal's
+`calculated_at` in older responses), not the moment you ran the command. The
+collector refreshes on a cron, so the header reports the age of the analysis
+rather than the age of your terminal session. A response that carries no stamp
+says so instead of borrowing your clock.
 
 ---
 
@@ -377,8 +351,8 @@ so the same inputs always produce the same digest. The keys are sorted and the
 JSON is compact; how the one number in it, `z_score`, is written depends on the
 engine version, and the response says which version sealed it (below).
 
-A word on `fields_overridden`, because the output above splits it in two and the
-seal does not. Five entries are always present (`analysis.anomaly_details`,
+A word on `fields_overridden`, because the CLI splits it in two and the seal
+does not. Five entries are always present (`analysis.anomaly_details`,
 `analysis.confidence`, `analysis.sentiment_score`, `confidence`,
 `is_volatility_alert`): the math engine writes those on every single response, so
 the LLM never gets a say. That is a **guarantee**, not a catch, and the CLI labels
@@ -386,12 +360,13 @@ it as such. The other entries are conditional, and those are the real catches:
 `sentiment` shows up only when the Z-Score rule overrode the LLM's verdict,
 `analysis.detailed_report` only when a lexical filter cut text out of it, and,
 since `v2.4.0-radar`, `summary` only when LEY 7 cut a volume claim out of the
-summary. The example above has one of them, the report, which is why it seals six.
+summary. The response in [Output](#output) has one of them, the report, which is
+why it seals six.
 
 The seal hashes the raw union of the six, exactly as the API ships it.
 
-This is the exact payload behind the output above, the eight fields copied from
-that response. Run it and you get the hash the engine issued, with no
+This is the exact payload behind the audit trail in [Output](#output), the eight
+fields copied from that response. Run it and you get the hash the engine issued, with no
 dependencies and no CryptoCapi account needed. One detail: from `v2.2.0-radar`
 the engine seals every number as a string with exactly 6 decimals, so the
 `z_score` of `2.2794` goes in as `"2.279400"` (the next section explains why):
@@ -585,7 +560,7 @@ can show it to a user as it is.
     ├── test_pro_required.py        # The Quant plan gate reads as an offer, not an HTTP error
     ├── test_terminal_encoding.py   # The output survives a terminal that isn't UTF-8
     └── fixtures/
-        ├── radar_alpha_v2.2.0.json # The real production insight behind the output above
+        ├── radar_alpha_v2.2.0.json # The real response behind the Output section
         ├── readme_demo_bitcoin_2026-10-17.json # The run the README opens with
         └── api/                    # Live captures, one per route the client calls
 ```
