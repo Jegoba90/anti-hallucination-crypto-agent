@@ -25,10 +25,10 @@ Keep it to a few sentences.
 ## Why volume is not a row in the comparison
 
 The prompt above asks four things; the table in the repo README compares only
-three. Volume is left out on purpose: the Radar engine has no volume feed (that
-is the Quant Plus engine's job), so putting it in a row would not be a
-like-for-like comparison. The models' volume answers are preserved, untouched,
-in `chatgpt.txt` and `gemini.txt`.
+three. Volume is left out on purpose: the Radar engine has no volume series to
+read, only a 24h total it cannot call high or low, so putting it in a row would
+not be a like-for-like comparison. The models' volume answers are preserved,
+untouched, in `chatgpt.txt` and `gemini.txt`.
 
 ## Verify the Radar side
 

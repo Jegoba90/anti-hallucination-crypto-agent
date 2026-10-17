@@ -34,7 +34,7 @@
   <circle cx="36" cy="39" r="5" fill="#a78bfa"/>
   <text x="49" y="44" font-size="16" font-weight="700" class="t-hi">CryptoCapi</text>
   <text x="141" y="44" font-size="12" class="mono t-mid" fill-opacity="0.85">/ Radar engine</text>
-  <text x="1172" y="44" text-anchor="end" font-size="11.5" class="t-mid">AI crypto analysis that proves it didn&#8217;t make anything up</text>
+  <text x="1172" y="44" text-anchor="end" font-size="11.5" class="t-mid">AI crypto analysis checked by a deterministic math engine</text>
 
   <!-- flow arrows (behind cards) -->
   <g stroke="#7c8aa5" stroke-width="1.7" marker-end="url(#arw)" fill="none">

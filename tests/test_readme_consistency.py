@@ -8,10 +8,14 @@ one thing this project promises. These tests pin that block to the fixture the
 rest of the suite already hashes.
 """
 
+import json
 import re
+import sys
 from pathlib import Path
 
-import json
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from display.terminal import console, render_insight
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -79,3 +83,24 @@ class TestReadmeOutputBlock:
         assert match is not None, "README no longer prints a protocol hash"
 
         assert match.group(1) == _load_fixture_audit_trail()["protocol_hash"]
+
+
+def _words(text: str) -> list[str]:
+    """Compare text the way a reader does: line wrapping and the live age aside."""
+    return re.sub(r"\(\d+ (?:min|h|d) ago\)", "", text).split()
+
+
+class TestReadmeOutputIsTheRealOutput:
+    def test_the_block_is_what_the_cli_prints_for_the_fixture(self) -> None:
+        """The block once lagged the renderer: it had no SOURCES section for
+        months after the CLI started printing one. Wrapping, and the age in the
+        header, which depends on the day the suite runs, may differ; no word may."""
+        match = re.search(r"## Output\n\n```\n(.*?)```", _load_readme(), re.DOTALL)
+        assert match is not None, "README no longer has an Output block"
+
+        fixture_path = Path(__file__).parent / "fixtures" / "sample_response.json"
+        data = json.loads(fixture_path.read_text(encoding="utf-8"))["data"]
+        with console.capture() as capture:
+            render_insight(data, "bitcoin")
+
+        assert _words(match.group(1)) == _words(capture.get())

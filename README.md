@@ -1,6 +1,6 @@
-![Anti-Hallucination Crypto Agent: AI crypto analysis that proves it didn't make anything up](assets/banner.svg)
+![Anti-Hallucination Crypto Agent: AI crypto analysis checked by a deterministic math engine](assets/banner.svg)
 
-> A Python agent that analyzes crypto markets using AI, and **proves** it didn't make anything up.
+> A Python agent that analyzes crypto markets using AI, and shows you exactly what a **deterministic math engine** corrected.
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
@@ -19,7 +19,7 @@ Ask an LLM to analyze Bitcoin and it will tell you the volume is "moderate", the
 
 In traditional software, a wrong answer is a bug you can catch. In AI, a confident wrong answer looks **identical** to a confident right one. That's not a UX problem: it's a capital risk.
 
-We built a different architecture. Before any insight reaches you, a deterministic Python math engine runs four sequential filters over the LLM's output, strips every claim that contradicts the actual numbers, and emits a **cryptographic receipt** proving exactly what was corrected.
+We built a different architecture. Before any insight reaches you, a deterministic Python math engine runs four sequential filters over the LLM's output, strips the claims that contradict the numbers it can check, and emits a **SHA-256 receipt** of exactly what was corrected.
 
 ---
 
@@ -45,7 +45,7 @@ The LLM generates the language. The math engine generates the truth.
 
 Anyone can rerun this. On 2026-07-20, in plain conversational mode with no live-data tools, we asked GPT-5.5, Gemini 3.1 Pro and the Radar agent the same four questions about Bitcoin: is trading volume high, moderate or low, where is price relative to its Bollinger Bands, what is the short-term sentiment, and how confident are you? The full prompt, the raw replies and Radar's JSON are in [`docs/comparisons/2026-07-20-btc/`](docs/comparisons/2026-07-20-btc).
 
-One of those four, volume, is left out of the table below on purpose: the Radar engine has no volume feed (that is the Quant Plus engine's job), so it is not a like-for-like axis. The models' volume answers are kept, untouched, in the raw replies.
+One of those four, volume, is left out of the table below on purpose: the Radar engine has no volume series to read, only a 24h total it cannot call high or low, so it is not a like-for-like axis. The models' volume answers are kept, untouched, in the raw replies.
 
 We are not claiming the raw models are wrong. We cannot prove that, and neither can they. The claim is narrower, and it is the whole point of the product: **one of these three answers you can check, the other two you cannot.**
 
@@ -80,7 +80,7 @@ python agent.py coin bitcoin
 ```
 
 That's it. No key to configure: the agent falls back to the public demo key on its
-own. You'll see the analysis **and** the audit trail proving it was verified.
+own. You'll see the analysis **and** the audit trail of what the math corrected.
 
 > **Want to analyze more coins?** The demo key is limited to BTC and ETH.
 > Get your free 14-day trial (no credit card): [cryptocapi.com](https://cryptocapi.com).
@@ -106,6 +106,10 @@ own. You'll see the analysis **and** the audit trail proving it was verified.
    El activo opera en zona de equilibrio técnico sin catalizador
    fundamental relevante en las últimas 24h. Las bandas de Bollinger
    muestran compresión consistente con una fase lateral consolidada.
+
+  SOURCES VERIFIED (1), window 24h:
+    [Tier 1] Bitcoin holds above key support as macro uncertainty persists
+             https://example.com/article-1
 
 ───────────────────────────────────────────────────────
   🛡️  ANTI-HALLUCINATION AUDIT TRAIL
@@ -215,8 +219,8 @@ python agent.py scan --strategy conservative
 
 ## Use Cases
 
-Every scenario below maps to a runnable script in `examples/`, so the fastest
-way to explore one is to open the file and run it.
+Each scenario below comes with the command that runs it, and most with a script
+in `examples/` you can open and adapt.
 
 ### Sanity-check a coin before acting on an AI signal
 
@@ -270,9 +274,10 @@ python agent.py batch bitcoin ethereum
 
 ### Archive analysis you can re-verify later
 
-Because every response carries its `protocol_hash`, a JSON dump is more than a
-log. Store the raw responses **and record their digests somewhere separate**, and
-an archive edited after the fact stops matching. The seal is unkeyed, so the
+Because every alpha response carries its `protocol_hash` (and the demo key always
+gets the alpha view), a JSON dump is more than a log. Store the raw responses
+**and record their digests somewhere separate**, and an archive edited after the
+fact stops matching. The seal is unkeyed, so the
 tamper-evidence lives in that independent copy of the hash, not in the file that
 carries it.
 
@@ -496,13 +501,13 @@ can show it to a user as it is.
 │   ├── terminal.py        # Rich terminal renderer
 │   └── themes.py          # Color scheme
 ├── examples/
-│   ├── basic_analysis.py  # Minimal: analyze BTC in 20 lines
+│   ├── basic_analysis.py  # Minimal: analyze BTC and read its audit trail
 │   ├── watch_mode.py      # Poll + detect sentiment changes
 │   ├── market_scanner.py  # Screener using market-scan endpoint
 │   └── batch_compare.py   # BTC vs ETH side by side (any coins with a trial key)
 └── tests/
     ├── test_audit_parser.py        # Parser + hash reproducibility
-    ├── test_readme_consistency.py  # Pins this README to the fixture
+    ├── test_readme_consistency.py  # The Output block is what the CLI prints for the fixture
     ├── test_seal_recipe.py         # The live recipe above, run as written, verifies real seals
     ├── test_published_evidence.py  # The sealed captures in docs/comparisons still verify
     ├── test_client_contract.py     # The client reads what the live API actually sends
@@ -535,8 +540,8 @@ No network calls and no API key required: every test runs against a local
 fixture. That includes running the live recipe above, exactly as written here,
 on the dump `coin --json` makes of two real engine responses, a `v2.1.0-radar`
 and a `v2.4.0-radar` one, so the recipe cannot drift from the seals it claims to
-verify without the suite failing. What the suite cannot see is an engine version newer than its
-newest capture: a seal rule that changes again needs a fresh one.
+verify without the suite failing. What the suite cannot see is an engine version
+newer than its newest capture: a seal rule that changes again needs a fresh one.
 
 The client's tests replay responses captured off the live API, in
 `tests/fixtures/api/`. The scan, which the demo key cannot reach, uses the
@@ -550,7 +555,7 @@ This agent is built on [CryptoCapi](https://cryptocapi.com), a crypto intelligen
 
 That machine-first design is concrete: the API publishes a live [`llms.txt`](https://www.cryptocapi.com/llms.txt) that maps every endpoint, its parameters and response shapes in the format AI agents read. This repo shows the *copy-a-typed-client* path; `llms.txt` is the *zero-code* one, an agent in Claude Code, Cursor or Copilot discovers the whole API on its own. Works anywhere: Claude Code · Cursor · GitHub Copilot · ChatGPT · LangChain · any REST client.
 
-Unlike general-purpose LLM wrappers, CryptoCapi's Radar engine runs a deterministic Python math pipeline between the AI and every API response. Every numeric field is computed by Python, not the LLM. Every qualitative claim is cross-validated against the math. And every response ships with a SHA-256 audit trail you can verify independently.
+Unlike general-purpose LLM wrappers, CryptoCapi's Radar engine runs a deterministic Python math pipeline between the AI and every API response. Every numeric field is computed by Python, not the LLM. Qualitative claims are cross-validated against the math. And every alpha response ships with a SHA-256 audit trail you can verify independently.
 
 Want to look under the hood? [CryptoCapi-Portfolio](https://github.com/Jegoba90/CryptoCapi-Portfolio) documents the architecture behind the API: the three engines, the 4-layer pipeline, the seal semantics per engine ([SEAL.md](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/docs/SEAL.md)), and real sealed responses captured from production.
 

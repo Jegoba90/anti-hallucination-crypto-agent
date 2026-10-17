@@ -48,7 +48,7 @@
   <text x="646.5" y="428" text-anchor="middle" font-size="24" font-weight="600" letter-spacing="13" fill="#9aa4b2">CRYPTO AGENT</text>
 
   <!-- the claim: the vertical room the 3.2:1 banner did not have -->
-  <text x="640" y="482" text-anchor="middle" font-size="20" fill="#9aa4b2">AI crypto analysis that <tspan fill="#e8ebf2" font-weight="600">proves</tspan> it didn&#8217;t make anything up.</text>
+  <text x="640" y="482" text-anchor="middle" font-size="20" fill="#9aa4b2">AI crypto analysis checked by a <tspan fill="#e8ebf2" font-weight="600">deterministic</tspan> math engine.</text>
 
   <line x1="540" y1="524" x2="740" y2="524" stroke="#ffffff" stroke-opacity="0.09" stroke-width="1"/>
 
