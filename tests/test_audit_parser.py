@@ -157,6 +157,11 @@ class TestExplainFilter:
         explanation = explain_filter("band position CERCA_BANDA_SUPERIOR")
         assert "CERCA_BANDA_SUPERIOR" in explanation
 
+    def test_band_position_as_the_engine_emits_it(self) -> None:
+        """insights_common.py writes the zone in parentheses."""
+        explanation = explain_filter("band position (CENTRO_BANDAS)")
+        assert explanation.endswith("the price was at CENTRO_BANDAS")
+
     def test_unknown_filter_passthrough(self) -> None:
         explanation = explain_filter("some_unknown_filter")
         assert "some_unknown_filter" in explanation
@@ -194,10 +199,13 @@ class TestVerifyHashFormat:
 class TestHashReproducibility:
     """Reproduce the protocol_hash from the response exactly like a third party
     would — pulling z_score/market_regime from math_diagnostics, sentiment from
-    the root, and filters/fields from the audit_trail. This pins the README's
-    offline example, a `v2.1.0-radar` seal, and nothing newer: the live recipe,
-    which has to cover every engine version, runs as written in
-    test_seal_recipe.py.
+    the root, and filters/fields from the audit_trail.
+
+    What this pins is the README's arithmetic, not the engine: the fixture is the
+    README's illustrative example, and its hash was computed from it with this
+    same recipe, so these tests could never notice the engine sealing another
+    way. That is how the 2026-09-01 rule change went unseen for six weeks. Real
+    seals, on both sides of that change, run in test_seal_recipe.py.
     """
 
     def test_recomputed_hash_matches_fixture(self) -> None:

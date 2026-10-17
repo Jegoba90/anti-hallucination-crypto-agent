@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Anti-Hallucination](https://img.shields.io/badge/Anti--Hallucination-CTC--2026%20Certified-blueviolet?style=flat-square)
+![Anti-Hallucination](https://img.shields.io/badge/Anti--Hallucination-verifiable%20seal-blueviolet?style=flat-square)
 [![Tests](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/Jegoba90/anti-hallucination-crypto-agent/actions/workflows/tests.yml)
 
 ![demo](demo.gif)
@@ -34,8 +34,8 @@ Left to right, box by box:
 - **Layer 2 · Prompt Injection (10 Laws).** Those math values go into the prompt as non-negotiable constraints. Laws 0-9 bound what the model is even allowed to claim.
 - **LLM.** Writes the language, and only the language. It never gets the last word on a number, and it cannot invent one.
 - **Layer 3 · Numeric Override.** Once the model answers, Python reclaims every numeric field. On any collision between the prose and the math, the math wins.
-- **Layer 4 · Lexical Filters.** Four deterministic filters (~300 lexical patterns) strip inflated volume claims, magnitude inflation, false-certainty markers and band-position contradictions.
-- **Verified Insight + SHA-256 seal.** The grounded narrative ships with a `protocol_hash` certifying exactly which corrections ran. The same inputs always produce the same digest, so anyone can re-verify it independently.
+- **Layer 4 · Lexical Filters.** Four deterministic filters (~300 lexical patterns) strip volume claims the engine cannot back, magnitude inflation, false-certainty markers and band-position contradictions.
+- **Verified Insight + SHA-256 seal.** The grounded narrative ships with a `protocol_hash` recording exactly which corrections ran. The same inputs always produce the same digest, so anyone can re-verify it independently.
 
 The LLM generates the language. The math engine generates the truth.
 
@@ -114,13 +114,13 @@ own. You'll see the analysis **and** the audit trail proving it was verified.
   Pipeline:  Radar 4-Layer Anti-Hallucination Pipeline
   Version:   v2.1.0-radar
   Seal type: process_seal
-             Certifies the 4-layer pipeline ran with these
-             exact corrections. Text is not reproducible
-             (LLM is non-deterministic by design).
+             Seals the exact corrections the 4-layer pipeline
+             applied. Text is not reproducible (LLM is
+             non-deterministic by design).
 
   Filters fired (2):
-    ✂️  [LEY 7 volume]  Removed a qualitative volume claim:
-                       the system has no volume data
+    ✂️  [LEY 7 volume]  Removed a volume claim: Radar has no
+                       volume trend to back it
     ✂️  [band position CENTRO_BANDAS]  Removed a band-edge
                        claim: the price was at CENTRO_BANDAS
 
@@ -152,14 +152,24 @@ own. You'll see the analysis **and** the audit trail proving it was verified.
     0xe024a312f5726bb2213c018e8fef8228dde21506655ca57295f2374d6e92eb63
 
 ───────────────────────────────────────────────────────
-  ✅ Math Override Certified (CTC-2026)
+  ✅ Math Override applied · seal verifiable
 ───────────────────────────────────────────────────────
 ```
 
-The date under the coin name is the engine's `calculated_at`, not the moment you
-ran the command. The collector refreshes on a cron, so the header reports the age
-of the analysis rather than the age of your terminal session. A response that
-carries no stamp says so instead of borrowing your clock.
+The date under the coin name is when the engine computed the analysis (the
+response's `generated_at`, or the seal's `calculated_at` in older responses), not
+the moment you ran the command. The collector refreshes on a cron, so the header
+reports the age of the analysis rather than the age of your terminal session. A
+response that carries no stamp says so instead of borrowing your clock.
+
+The response behind this block is illustrative, and saying so is the point of
+this repo. It is the fixture in `tests/fixtures/sample_response.json`, written
+in the shape of a `v2.1.0-radar` response to show filters and corrections
+firing, and its `protocol_hash` was computed from it for this README, not issued
+by the engine. Real seals are what
+[Now do it on a live response](#now-do-it-on-a-live-response) runs on; the test
+suite runs that recipe on two captured engine responses, and
+[`docs/comparisons/`](docs/comparisons/2026-07-20-btc) holds one of them.
 
 ---
 
@@ -192,7 +202,8 @@ python agent.py coin solana
 # Batch with any other coin (the demo key rejects the whole batch otherwise)
 python agent.py batch bitcoin ethereum solana
 
-# Market scan: rank all tracked assets by signal strength
+# Market scan: rank the Quant Plus universe by how close each asset is to
+# its own anomaly threshold
 python agent.py scan
 python agent.py scan --strategy aggressive --limit 5
 python agent.py scan --strategy conservative
@@ -231,11 +242,14 @@ python agent.py coin bitcoin --watch --interval 15
 # script version: python examples/watch_mode.py bitcoin 15
 ```
 
-### Screen the market before entering a trade
+### Survey the market for assets nearing an anomaly
 
-Rank every tracked asset by signal strength under a risk profile and shortlist
-the top N. This path runs on the Quant engines, which are pure math: no LLM is
-involved anywhere in a scan.
+Rank the curated Quant Plus universe (up to about 15 assets) by how close each
+one is to firing its own anomaly threshold, and keep the top N. The strategy
+changes the order, not the set: `aggressive` ranks by that proximity,
+`conservative` by the evidence behind it, `balanced` by both. It is
+surveillance, not a recommendation, and it is pure math: no LLM is involved
+anywhere in a scan.
 
 ```bash
 python agent.py scan --strategy aggressive --limit 5
@@ -302,14 +316,17 @@ it as such. The other entries are conditional, and those are the real catches:
 `sentiment` shows up only when the Z-Score rule overrode the LLM's verdict,
 `analysis.detailed_report` only when a lexical filter cut text out of it, and,
 since `v2.4.0-radar`, `summary` only when LEY 7 cut a volume claim out of the
-summary. The run above has the first two, which is why it seals seven.
+summary. The example above has the first two, which is why it seals seven.
 
 The seal hashes the raw union of the seven, exactly as the API ships it.
 
-This is the exact payload behind the output above, and the same fixture the test
-suite runs against. It is a `v2.1.0-radar` seal, from before the rule change
-described in the next section, so `z_score` goes in as a plain number. Run it and
-you get that exact hash, with no dependencies and no CryptoCapi account needed:
+This is the exact payload behind the output above. Like that output it is
+illustrative: the hash was computed from this payload, so running it shows the
+arithmetic of the seal, not that the engine issued it. The next section runs the
+same arithmetic on a real response. It follows the `v2.1.0-radar` rule, from
+before the change described there, so `z_score` goes in as a plain number. Run
+it and you get that exact hash, with no dependencies and no CryptoCapi account
+needed:
 
 ```python
 import hashlib, json
@@ -389,6 +406,10 @@ print(digest == trail["protocol_hash"])
 
 If it prints `True`, the response is internally consistent: the corrections listed
 in the trail are exactly the ones the digest was computed over.
+
+The full recipe for all three engines, with a JavaScript reference implementation
+and every version boundary, is in
+[SEAL.md](https://github.com/Jegoba90/CryptoCapi-Portfolio/blob/main/docs/SEAL.md).
 
 ### What the seal does and does not prove
 
@@ -495,7 +516,7 @@ can show it to a user as it is.
     ├── test_pro_required.py        # The Quant plan gate reads as an offer, not an HTTP error
     ├── test_terminal_encoding.py   # The output survives a terminal that isn't UTF-8
     └── fixtures/
-        ├── sample_response.json    # The insight behind the output above
+        ├── sample_response.json    # The illustrative insight behind the output above
         └── api/                    # Live captures, one per route the client calls
 ```
 
@@ -512,9 +533,9 @@ ruff check .
 
 No network calls and no API key required: every test runs against a local
 fixture. That includes running the live recipe above, exactly as written here,
-on the dump `coin --json` makes of a `v2.1.0-radar` and of a `v2.4.0-radar`
-response, so the recipe cannot drift from the seals it claims to verify without
-the suite failing. What the suite cannot see is an engine version newer than its
+on the dump `coin --json` makes of two real engine responses, a `v2.1.0-radar`
+and a `v2.4.0-radar` one, so the recipe cannot drift from the seals it claims to
+verify without the suite failing. What the suite cannot see is an engine version newer than its
 newest capture: a seal rule that changes again needs a fresh one.
 
 The client's tests replay responses captured off the live API, in

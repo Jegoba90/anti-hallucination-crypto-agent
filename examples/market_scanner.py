@@ -1,4 +1,4 @@
-"""Market scanner — rank all tracked assets by signal strength.
+"""Market scanner — rank the Quant Plus universe by proximity to each asset's anomaly threshold.
 
 Usage:
     python examples/market_scanner.py balanced 10

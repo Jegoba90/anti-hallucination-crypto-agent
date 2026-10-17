@@ -146,7 +146,7 @@
     <path d="M1048 244 l2.4 2.6 l4.4 -5" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="1051.5" cy="244" r="8" fill="none" stroke="#34d399" stroke-opacity="0.55" stroke-width="1.2"/>
     <text x="1074" y="248" font-size="9.5" letter-spacing="1.2" class="mono" fill="#7ff0c8">SHA-256 SEAL</text>
-    <text x="1096" y="278" text-anchor="middle" font-size="9" class="mono" fill="#34d399" fill-opacity="0.7">0xe024a312&#8230;eb63</text>
+    <text x="1096" y="278" text-anchor="middle" font-size="9" class="mono" fill="#34d399" fill-opacity="0.7">0xbd2946a3&#8230;a8be</text>
   </g>
 
   <!-- thesis -->

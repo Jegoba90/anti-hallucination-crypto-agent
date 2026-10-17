@@ -1,4 +1,7 @@
 httpx>=0.27.0
 rich>=13.7.0
 python-dotenv>=1.0.0
-typer>=0.12.0
+# Not lower: typer up to 0.15.3 accepts any click, and click 8.2 broke it
+# (`agent.py --help` dies with a TypeError). 0.15.4 caps click below 8.2 and
+# 0.16 supports the newer one, so every version pip can pick from here works.
+typer>=0.15.4

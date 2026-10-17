@@ -30,14 +30,16 @@ is the Quant Plus engine's job), so putting it in a row would not be a
 like-for-like comparison. The models' volume answers are preserved, untouched,
 in `chatgpt.txt` and `gemini.txt`.
 
-## Reproduce the Radar side
+## Verify the Radar side
 
-```bash
-python agent.py coin bitcoin --json
-```
+The `protocol_hash` in `radar.json` is reproducible from the payload: run the
+"Now do it on a live response" recipe from the repo README on the file's `data`
+object, since `radar.json` keeps the whole envelope and the recipe reads the
+`--json` dump, which is `data` alone. It is a `v2.1.0-radar` seal, so the
+recipe hashes its `z_score` as a plain number.
 
-The `protocol_hash` in `radar.json` is reproducible from the payload; see
-"Verify the Hash Yourself" in the repo README for the exact recipe.
+`python agent.py coin bitcoin --json` gives you today's Radar read, not this
+one: the engine and the market have both moved since 2026-07-20.
 
 ## Notes on fidelity
 

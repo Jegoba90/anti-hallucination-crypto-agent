@@ -94,6 +94,30 @@ class TestHeaderNeverInventsATime:
         assert "no analysis timestamp" in out
         assert "PULSE VIEW" in out
 
+
+class TestGeneratedAtIsTheAnalysisAge:
+    """The API documents `generated_at` as when the engine computed the analysis,
+    in every view. The header read only the audit trail's stamp, so a Pulse
+    response, which ships no trail, said it carried no timestamp while it did."""
+
+    def test_pulse_view_is_dated_by_generated_at(self) -> None:
+        data = _load_fixture()
+        del data["math_diagnostics"]["audit_trail"]
+        data["generated_at"] = "2026-10-16T22:03:36.426Z"
+
+        out = _render(data)
+
+        assert "Analysis computed 2026-10-16 22:03:36 UTC" in out
+        assert "no analysis timestamp" not in out
+
+    def test_generated_at_wins_over_the_seal_stamp(self) -> None:
+        data = _with_calculated_at("2026-10-16T22:03:36.361251Z")
+        data["generated_at"] = "2026-10-16T22:04:00.000Z"
+
+        out = _render(data)
+
+        assert "Analysis computed 2026-10-16 22:04:00 UTC" in out
+
     def test_unparseable_stamp_falls_back_instead_of_raising(self) -> None:
         out = _render(_with_calculated_at("last Tuesday"))
 

@@ -63,6 +63,9 @@ class InsightData(TypedDict, total=False):
 
     engine_used: str  # radar | quant_plus
     asset: Asset
+    # When the engine computed this analysis. The API's documented age field,
+    # present in both views; the Pulse view carries no audit trail to read.
+    generated_at: str
     summary: str
     sentiment: str  # bullish | bearish | neutral
     statistical_anomaly_detected: bool

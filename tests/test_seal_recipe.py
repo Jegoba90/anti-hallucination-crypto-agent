@@ -10,7 +10,9 @@ fixture, so a change in the README or in the API could reach neither.
 This closes both gaps. It makes the dump the way the README says to, with
 `coin --json` (fed a captured response instead of the network), then runs the
 README's own code block, not a copy of it, on that dump. It does so for a seal
-on each side of the rule change.
+on each side of the rule change, and both are seals the engine issued: the
+README's own example fixture is illustrative, its hash computed from it, so a
+recipe run on it could only ever agree with itself.
 """
 
 import contextlib
@@ -62,7 +64,7 @@ def _dump_with_the_cli(monkeypatch: pytest.MonkeyPatch, capture: Path) -> str:
 @pytest.mark.parametrize(
     ("capture", "version"),
     [
-        (_TESTS / "fixtures" / "sample_response.json", "v2.1.0-radar"),
+        (_TESTS.parent / "docs" / "comparisons" / "2026-07-20-btc" / "radar.json", "v2.1.0-radar"),
         (_TESTS / "fixtures" / "api" / "insight_bitcoin_alpha.json", "v2.4.0-radar"),
     ],
 )

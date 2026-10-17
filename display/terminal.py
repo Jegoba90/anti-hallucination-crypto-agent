@@ -110,7 +110,7 @@ def _format_age(computed: datetime, now: datetime) -> str:
     return f"{hours // 24} d ago"
 
 
-def _timestamp_line(audit: AuditSummary) -> str:
+def _timestamp_line(stamp: str) -> str:
     """Report when the analysis was computed, never when it was printed.
 
     The header used to print `datetime.now()`, which a reader takes for the age
@@ -119,11 +119,11 @@ def _timestamp_line(audit: AuditSummary) -> str:
     numbers is the display layer asserting a freshness nobody measured, which is
     the move this whole tool exists to catch, made by the tool itself.
 
-    `calculated_at` is the engine's own stamp. When a response does not carry one
-    (the Pulse view ships no audit trail), the line says the time is the render's
-    rather than passing it off as the data's.
+    `stamp` is the engine's own: `generated_at`, or the seal's `calculated_at`
+    in a response that predates it. When a response carries neither, the line
+    says the time is the render's rather than passing it off as the data's.
     """
-    computed = _parse_calculated_at(audit.calculated_at)
+    computed = _parse_calculated_at(stamp)
     if computed is None:
         return f"Rendered {_now_utc()}, this response carries no analysis timestamp"
 
@@ -145,16 +145,21 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     is_alert = (math or {}).get("extreme_volatility_detected", False)
     confidence = data.get("confidence")
 
-    # Parsed before the header, not just before the audit block: the header's
-    # timestamp comes from the trail's `calculated_at`, so both readers of the
-    # audit share one parse instead of the display deriving a time of its own.
+    # Parsed before the header, not just before the audit block: when a response
+    # has no `generated_at`, the header falls back to the trail's `calculated_at`,
+    # so both readers of the audit share one parse.
     audit = parse_audit_trail(math.get("audit_trail") if math else None)
+
+    # `generated_at` first: the API documents it as the age of the analysis in
+    # every view. Reading only the trail's stamp left the Pulse view, which has
+    # no trail, declaring "no analysis timestamp" while it carried one.
+    stamp = data.get("generated_at") or audit.calculated_at
 
     # ── Header ──────────────────────────────────────────────
     header = Text()
     header.append("  CRYPTOCAPI RADAR — ", style=COLORS["header"])
     header.append(f"{name} ({symbol})", style=COLORS["coin_name"])
-    header.append(f"\n  {_timestamp_line(audit)}", style=COLORS["muted"])
+    header.append(f"\n  {_timestamp_line(stamp)}", style=COLORS["muted"])
 
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
@@ -301,7 +306,9 @@ def _render_audit(audit: AuditSummary) -> None:
 
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
-    console.print(f"  [{COLORS['seal_ok']}]✅ Math Override Certified (CTC-2026)[/]")
+    # "verifiable", not "certified": the seal is self-issued, and anyone can check
+    # it with the recipe in the README. Certified would claim a third party.
+    console.print(f"  [{COLORS['seal_ok']}]✅ Math Override applied · seal verifiable[/]")
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
 

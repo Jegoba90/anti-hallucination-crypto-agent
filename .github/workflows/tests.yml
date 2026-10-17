@@ -11,12 +11,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.13"]
+        python-version: ["3.11", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -28,10 +28,30 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v
 
-      # Runs on both interpreters of the matrix: see mypy.ini for why the config
+      # Runs on every interpreter of the matrix: see mypy.ini for why the config
       # pins no python_version.
       - name: Check types
         run: mypy .
 
       - name: Lint
         run: ruff check .
+
+  # The floors in requirements.txt are a promise too. Install exactly them and
+  # run the suite, so a floor that stops working fails here and not on a user:
+  # typer>=0.12.0 sat in that file for months after click 8.2 broke it.
+  minimum-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install the declared floors
+        run: |
+          grep -v '^#' requirements.txt | sed 's/>=/==/' > floors.txt
+          pip install -r floors.txt pytest
+
+      - name: Run tests
+        run: pytest tests/ -q

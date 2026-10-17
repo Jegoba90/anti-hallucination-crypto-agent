@@ -142,13 +142,13 @@ def scan(
         "balanced",
         "--strategy",
         "-s",
-        help="Ranking strategy: balanced | aggressive | conservative",
+        help="Ranking order, not a filter: balanced | aggressive | conservative",
     ),
     # The API validates strategy and limit and says what it rejected (ApiError),
     # so its bounds are documented here, not duplicated where they could drift.
     limit: int = typer.Option(10, "--limit", "-l", help="Number of results to show (1-50)"),
 ) -> None:
-    """Rank all tracked assets by signal strength."""
+    """Rank the Quant Plus universe by proximity to each asset's own anomaly threshold."""
 
     async def _run() -> None:
         client = _get_client()

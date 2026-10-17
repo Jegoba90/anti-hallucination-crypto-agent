@@ -3,7 +3,10 @@ from dataclasses import dataclass, field
 from .models import AuditTrail
 
 _FILTER_EXPLANATIONS: dict[str, str] = {
-    "LEY 7 volume": "Removed a qualitative volume claim: the system has no volume data",
+    # Up to v2.3.0-radar it cut adjectives about volume; from v2.4.0 it cuts any
+    # sentence that mentions it. Radar sees one 24h total and no trend, so it
+    # cannot say volume is high, low or rising. Worded to hold for both.
+    "LEY 7 volume": "Removed a volume claim: Radar has no volume trend to back it",
     "magnitude inflation": "Removed an inflated adjective: the Z-Score was too low to justify it",
     "certainty inflation": "Removed a certainty marker: sentiment was neutral or confidence too low",
 }
@@ -31,13 +34,15 @@ def explain_field(field_name: str) -> str:
 
 
 _SEAL_TYPE_EXPLANATIONS: dict[str, str] = {
+    # "Seals", never "certifies": a self-issued digest is verifiable, and
+    # certified would claim a third party that does not exist.
     "process_seal": (
-        "Certifies the 4-layer pipeline ran with these exact corrections. "
+        "Seals the exact corrections the 4-layer pipeline applied. "
         "Text is not reproducible (LLM is non-deterministic by design)."
     ),
     "output_seal": (
-        "Certifies these outputs match their digest. "
-        "Re-fetchable from Binance candles to reproduce it independently."
+        "Any change to these outputs breaks the digest. "
+        "Reproducible by re-fetching the same Binance candles."
     ),
     "reproducible": (
         "Fully reproducible — recompute from the embedded input_vector "
@@ -48,7 +53,9 @@ _SEAL_TYPE_EXPLANATIONS: dict[str, str] = {
 
 def explain_filter(filter_name: str) -> str:
     if filter_name.startswith("band position"):
-        zone = filter_name.replace("band position", "").strip()
+        # The engine emits "band position (CENTRO_BANDAS)"; without dropping the
+        # parentheses the explanation printed "the price was at (CENTRO_BANDAS)".
+        zone = filter_name.replace("band position", "").strip().strip("()").strip()
         return f"Removed a band-edge claim: the price was at {zone}"
     return _FILTER_EXPLANATIONS.get(filter_name, f"Filter applied: {filter_name}")
 
