@@ -101,18 +101,20 @@ own. You'll see the analysis **and** the audit trail of what the math corrected.
   📈 SENTIMENT:       bullish
   🎯 CONFIDENCE:      HIGH (0.95)
   🔺 Z-SCORE:         2.279 (no anomaly)
+  📏 BANDWIDTH:       0.3225 (band width / 20-period mean)
 
   ANALYSIS:
    El estado de las bandas indica COMPRESIÓN activa, sugiriendo acumulación de
    energía volátil previa a una posible expansión direccional. El Z-Score
-   positivo confirma la fortaleza relativa del precio frente a la media móvil. En
-   el frente macroestructural, se observa un pivote significativo en la industria
-   minera: operadores como Hyperscale están desmantelando infraestructura de
-   Bitcoin para contratos de Inteligencia Artificial de alto valor. Este fenómeno
-   representa una reasignación estructural de capital y energía a largo plazo,
-   aunque el impacto inmediato en la oferta circulante es marginal. La acción del
-   precio actual responde a dinámicas técnicas de ruptura, mientras el fundamento
-   sectorial evoluciona hacia la diversificación energética.
+   positivo confirma la fortaleza relativa del precio frente a la media móvil.
+   En el frente macroestructural, se observa un pivote significativo en la
+   industria minera: operadores como Hyperscale están desmantelando
+   infraestructura de Bitcoin para contratos de Inteligencia Artificial de
+   alto valor. Este fenómeno representa una reasignación estructural de
+   capital y energía a largo plazo, aunque el impacto inmediato en la oferta
+   circulante es marginal. La acción del precio actual responde a dinámicas
+   técnicas de ruptura, mientras el fundamento sectorial evoluciona hacia la
+   diversificación energética.
 
   SOURCES VERIFIED (1), window 24h:
     [Tier 2] Bitcoin Miner Ditches Site for AI Deal That Could Top $1.2
@@ -131,7 +133,7 @@ own. You'll see the analysis **and** the audit trail of what the math corrected.
 
   Filters fired (1):
     ✂️  [LEY 7 volume]  Removed a volume claim: Radar has no volume trend to
-                       back it
+                        back it
 
   Corrections applied to the LLM's output (1):
     ✏️  analysis.detailed_report
@@ -522,6 +524,7 @@ can show it to a user as it is.
     ├── test_render_timestamp.py    # The header dates the analysis, not the printing
     ├── test_render_quant.py        # Scan and batch rows name their asset and show the ranking
     ├── test_render_markup.py       # API text prints as text, never as Rich markup
+    ├── test_render_layout.py       # Long text keeps its indent; nothing is cut; band width shown
     ├── test_pro_required.py        # The Quant plan gate reads as an offer, not an HTTP error
     ├── test_terminal_encoding.py   # The output survives a terminal that isn't UTF-8
     └── fixtures/

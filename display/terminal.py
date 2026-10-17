@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from rich.console import Console
 from rich.markup import escape
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 from rich import box
@@ -49,6 +50,23 @@ _force_utf8_output()
 console = Console()
 
 _DIVIDER = "─" * 55
+
+
+def _print_wrapped(prefix: str, body: str) -> None:
+    """Print `body` after `prefix`, wrapping under the body instead of the margin.
+
+    A plain print wraps long text back to column 0, so a report or an explanation
+    ran ragged under its own label, and the README showed it aligned in a way
+    the CLI never printed. A two-column grid keeps every wrapped line under the
+    first. Both arguments are Rich markup: escape API text before passing it.
+    """
+    grid = Table.grid()
+    grid.add_column(no_wrap=True)
+    # fold, not the default ellipsis: a word longer than the line is split, and
+    # no character the API sent is ever cut off the screen.
+    grid.add_column(overflow="fold")
+    grid.add_row(prefix, body)
+    console.print(grid)
 
 
 def _sentiment_color(sentiment: str) -> str:
@@ -196,6 +214,17 @@ def render_insight(data: InsightData, coin_id: str) -> None:
             )
             console.print(f"  🔺 Z-SCORE:         [{COLORS['muted']}]{z:.3f} ({anomaly})[/]")
 
+        bandwidth = math.get("bollinger_bandwidth")
+        if bandwidth is not None:
+            # The width the narrative talks about, so a reader can hold it up
+            # against the prose. Only the width: whether the bands are expanding
+            # or compressing is a day-over-day change the engine computes and the
+            # response does not carry, so the screen does not claim it either.
+            console.print(
+                f"  📏 BANDWIDTH:       [{COLORS['muted']}]{bandwidth:.4f} "
+                f"(band width / 20-period mean)[/]"
+            )
+
     if is_alert:
         console.print("\n  [bold red]⚡ VOLATILITY ALERT[/bold red]")
 
@@ -203,10 +232,10 @@ def render_insight(data: InsightData, coin_id: str) -> None:
     if report:
         console.print("\n  [bold]ANALYSIS:[/bold]")
         for line in report.strip().split("\n"):
-            console.print(f"   {escape(line)}")
+            _print_wrapped("   ", escape(line))
     elif summary:
         console.print("\n  [bold]SUMMARY:[/bold]")
-        console.print(f"   {escape(summary)}")
+        _print_wrapped("   ", escape(summary))
 
     _render_sources(analysis or {})
 
@@ -233,9 +262,11 @@ def _render_sources(analysis: Analysis) -> None:
     window = analysis.get("sources_window", "")
 
     if not sources:
-        console.print(
-            f"\n  [{COLORS['warning']}]⚠  SOURCES VERIFIED (0): "
-            f"the narrative above is not anchored to any article[/]"
+        console.print()
+        _print_wrapped(
+            "  ",
+            f"[{COLORS['warning']}]⚠  SOURCES VERIFIED (0): "
+            f"the narrative above is not anchored to any article[/]",
         )
         return
 
@@ -247,10 +278,27 @@ def _render_sources(analysis: Analysis) -> None:
     for source in sources:
         tier = source.get("credibility", "—")
         color = CREDIBILITY_COLORS.get(tier, "white")
-        console.print(f"    [{color}][{escape(tier)}][/] {escape(source.get('title', ''))}")
+        # The title wraps under itself, which is also where the URL starts.
+        _print_wrapped(f"    [{color}][{escape(tier)}][/] ", escape(source.get("title", "")))
         url = source.get("url", "")
         if url:
-            console.print(f"             [{COLORS['muted']}]{escape(url)}[/]")
+            # One unbroken line. Rich used to hard-wrap a long URL at the terminal
+            # width, so it reached the screen in two pieces and a click opened
+            # the first one, an address that does not exist. soft_wrap leaves the
+            # wrapping to the terminal, which keeps it one string to copy, and
+            # the link style makes it clickable whole where the terminal can.
+            line = Text("             ")
+            line.append(url, style=_url_style(url))
+            console.print(line, soft_wrap=True)
+
+
+def _url_style(url: str) -> Style:
+    muted = Style.parse(COLORS["muted"])
+    # Only web addresses become links: the string comes from the API, and a
+    # terminal follows whatever scheme a link hands it.
+    if url.startswith(("https://", "http://")):
+        return muted + Style(link=url)
+    return muted
 
 
 def _render_audit(audit: AuditSummary) -> None:
@@ -260,7 +308,7 @@ def _render_audit(audit: AuditSummary) -> None:
     console.print(f"  Pipeline:  [{COLORS['muted']}]{escape(audit.algorithm_id)}[/]")
     console.print(f"  Version:   [{COLORS['muted']}]{escape(audit.engine_version)}[/]")
     console.print(f"  Seal type: [{COLORS['muted']}]{escape(audit.seal_type)}[/]")
-    console.print(f"             [{COLORS['muted']}]{escape(audit.seal_explanation)}[/]")
+    _print_wrapped("             ", f"[{COLORS['muted']}]{escape(audit.seal_explanation)}[/]")
 
     console.print()
     if audit.filters:
@@ -268,13 +316,14 @@ def _render_audit(audit: AuditSummary) -> None:
         for name, explanation in audit.filters:
             # escape(): a filter name like "band position CENTRO_BANDAS" is valid Rich
             # markup, so an unescaped [name] gets parsed as a style tag and vanishes.
-            console.print(
-                f"    ✂️  [{COLORS['filter_fired']}]{escape(f'[{name}]')}[/]"
-                f"  [{COLORS['muted']}]{escape(explanation)}[/]"
+            _print_wrapped(
+                f"    ✂️  [{COLORS['filter_fired']}]{escape(f'[{name}]')}[/]  ",
+                f"[{COLORS['muted']}]{escape(explanation)}[/]",
             )
     else:
-        console.print(
-            f"  [{COLORS['muted']}]No filters fired: the LLM's output was consistent with the math[/]"
+        _print_wrapped(
+            "  ",
+            f"[{COLORS['muted']}]No filters fired: the LLM's output was consistent with the math[/]",
         )
 
     if audit.fields_corrected:
@@ -284,7 +333,7 @@ def _render_audit(audit: AuditSummary) -> None:
         )
         for field_name, reason in audit.fields_corrected:
             console.print(f"    ✏️  [{COLORS['warning']}]{escape(field_name)}[/]")
-            console.print(f"        [{COLORS['muted']}]{escape(reason)}[/]")
+            _print_wrapped("        ", f"[{COLORS['muted']}]{escape(reason)}[/]")
 
     if audit.fields_owned:
         console.print()
@@ -293,10 +342,12 @@ def _render_audit(audit: AuditSummary) -> None:
             console.print(f"    🔒  [{COLORS['field_overridden']}]{escape(field_name)}[/]")
             explanation = explain_field(field_name)
             if explanation:
-                console.print(f"        [{COLORS['muted']}]{escape(explanation)}[/]")
-        console.print(
-            f"\n  [{COLORS['muted']}]The math engine writes these on every response, "
-            f"whatever the LLM said.[/]"
+                _print_wrapped("        ", f"[{COLORS['muted']}]{escape(explanation)}[/]")
+        console.print()
+        _print_wrapped(
+            "  ",
+            f"[{COLORS['muted']}]The math engine writes these on every response, "
+            f"whatever the LLM said.[/]",
         )
 
     if audit.protocol_hash:
@@ -318,7 +369,7 @@ def render_demo_restricted(message: str) -> None:
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  🔒  [{COLORS['free_banner']}]DEMO KEY — bitcoin & ethereum only[/]")
     console.print()
-    console.print(f"  [{COLORS['muted']}]{escape(message)}[/]")
+    _print_wrapped("  ", f"[{COLORS['muted']}]{escape(message)}[/]")
     console.print()
     console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
     console.print(_DIVIDER, style=COLORS["divider"])
@@ -345,7 +396,9 @@ def render_no_analysis(coin_id: str) -> None:
 
 def render_error(message: str) -> None:
     # escape(): the message can quote the API, and its text is not markup.
-    console.print(f"\n  [bold red]Error:[/bold red] {escape(message)}\n")
+    console.print()
+    _print_wrapped("  [bold red]Error:[/bold red] ", escape(message))
+    console.print()
 
 
 def render_sentiment_change(previous: str, current: str) -> None:
@@ -367,10 +420,11 @@ def render_pro_required(message: str) -> None:
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  🔒  [{COLORS['free_banner']}]QUANT ENGINES: key required[/]")
     console.print()
-    console.print(f"  [{COLORS['muted']}]{escape(message)}[/]")
-    console.print(
-        f"  [{COLORS['muted']}]The public demo key reaches bitcoin and ethereum only, "
-        f"on insights and batch.[/]"
+    _print_wrapped("  ", f"[{COLORS['muted']}]{escape(message)}[/]")
+    _print_wrapped(
+        "  ",
+        f"[{COLORS['muted']}]The public demo key reaches bitcoin and ethereum only, "
+        f"on insights and batch.[/]",
     )
     console.print()
     console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
@@ -475,9 +529,10 @@ def render_batch(results: list[SignalResult]) -> None:
 
         # A symbol the engine has no signal for comes back with every field null.
         if not r.get("available", True):
-            console.print(
-                f"  [{COLORS['coin_name']}]{label_text}[/]  "
-                f"[{COLORS['muted']}]no pre-computed signal for this asset[/]"
+            _print_wrapped(
+                "  ",
+                f"[{COLORS['coin_name']}]{label_text}[/]  "
+                f"[{COLORS['muted']}]no pre-computed signal for this asset[/]",
             )
             continue
 
@@ -493,15 +548,16 @@ def render_batch(results: list[SignalResult]) -> None:
         sig_color = SIGNAL_COLORS.get(signal, "white")
         sentiment_icon = SENTIMENT_ICONS.get(sentiment, "➡️ ")
 
-        console.print(
-            f"  [{COLORS['coin_name']}]{label_text}[/]  "
+        _print_wrapped(
+            "  ",
+            f"[{COLORS['coin_name']}]{label_text}[/]  "
             f"[{sig_color}]{escape(signal)}[/]  "
             f"{sentiment_icon} [{s_color}]{escape(sentiment)}[/]  "
             f"[{c_color}]{escape(label)} ({score:.2f})[/]  "
-            f"[{COLORS['regime']}]{escape(regime)}[/]"
+            f"[{COLORS['regime']}]{escape(regime)}[/]",
         )
         if summary:
-            console.print(f"  [{COLORS['muted']}]{escape(summary)}[/]")
+            _print_wrapped("  ", f"[{COLORS['muted']}]{escape(summary)}[/]")
 
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])

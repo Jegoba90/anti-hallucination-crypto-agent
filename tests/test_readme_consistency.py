@@ -13,9 +13,9 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from rich.console import Console
 
-from display.terminal import console, render_insight
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -85,22 +85,44 @@ class TestReadmeOutputBlock:
         assert match.group(1) == _load_fixture_audit_trail()["protocol_hash"]
 
 
-def _words(text: str) -> list[str]:
-    """Compare text the way a reader does: line wrapping and the live age aside."""
-    return re.sub(r"\(\d+ (?:min|h|d) ago\)", "", text).split()
+# The width the README's Output block is rendered at.
+README_WIDTH = 78
+
+
+def _lines(text: str) -> list[str]:
+    """Lines as a reader sees them: trailing spaces and the live age aside."""
+    text = re.sub(r"\(\d+ (?:min|h|d) ago\)", "(… ago)", text)
+    return [line.rstrip() for line in text.strip("\n").splitlines()]
+
+
+def render_readme_output() -> str:
+    """What `coin bitcoin` prints for the fixture, at the README's width.
+
+    Shared with whoever regenerates the README block, so the two can only be
+    produced one way.
+    """
+    import display.terminal
+
+    fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
+    data = json.loads(fixture_path.read_text(encoding="utf-8"))["data"]
+    original = display.terminal.console
+    display.terminal.console = Console(width=README_WIDTH, color_system=None)
+    try:
+        with display.terminal.console.capture() as capture:
+            display.terminal.render_insight(data, "bitcoin")
+    finally:
+        display.terminal.console = original
+    return capture.get()
 
 
 class TestReadmeOutputIsTheRealOutput:
     def test_the_block_is_what_the_cli_prints_for_the_fixture(self) -> None:
-        """The block once lagged the renderer: it had no SOURCES section for
-        months after the CLI started printing one. Wrapping, and the age in the
-        header, which depends on the day the suite runs, may differ; no word may."""
+        """Line for line, indentation included. The block once lagged the
+        renderer (no SOURCES section for months), and once showed wrapped text
+        neatly aligned while the CLI sent it back to the margin; comparing words
+        alone caught the first and missed the second. Only the age in the
+        header, which depends on the day the suite runs, may differ."""
         match = re.search(r"## Output\n\n```\n(.*?)```", _load_readme(), re.DOTALL)
         assert match is not None, "README no longer has an Output block"
 
-        fixture_path = Path(__file__).parent / "fixtures" / "radar_alpha_v2.2.0.json"
-        data = json.loads(fixture_path.read_text(encoding="utf-8"))["data"]
-        with console.capture() as capture:
-            render_insight(data, "bitcoin")
-
-        assert _words(match.group(1)) == _words(capture.get())
+        assert _lines(match.group(1)) == _lines(render_readme_output())
