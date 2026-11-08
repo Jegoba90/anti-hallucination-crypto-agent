@@ -1,8 +1,8 @@
 # BTC market read, three assistants, 2026-07-20
 
 Captured 2026-07-20 in plain conversational mode, with no live-data tools or
-browsing enabled. This is the raw evidence behind the comparison table in the
-repo README.
+browsing enabled. This archive preserves the comparison context; it is not a
+controlled accuracy benchmark.
 
 Models:
 
@@ -22,13 +22,12 @@ You're a crypto market analyst. Give me a short read on Bitcoin (BTC) right now:
 Keep it to a few sentences.
 ```
 
-## Why volume is not a row in the comparison
+## Limits of the comparison
 
-The prompt above asks four things; the table in the repo README compares only
-three. Volume is left out on purpose: the Radar engine has no volume series to
-read, only a 24h total it cannot call high or low, so putting it in a row would
-not be a like-for-like comparison. The models' volume answers are preserved,
-untouched, in `chatgpt.txt` and `gemini.txt`.
+The Radar response reports a volume filter because a single 24h total cannot
+establish a volume trend. The models' answers are preserved in `chatgpt.txt`
+and `gemini.txt`. The archive does not include the raw price series needed
+to recalculate Radar's indicators or establish which narrative is correct.
 
 ## Verify the Radar side
 
@@ -46,4 +45,6 @@ one: the engine and the market have both moved since 2026-07-20.
 The two raw replies are transcribed as rendered (Gemini's LaTeX for the band
 sigmas is written out as plain text). Model versions are pinned above on purpose:
 model behavior drifts over time, and that is the point of the comparison. The raw
-answers are not reproducible, the sealed one is.
+answers are not reproducible. Only the eight fields covered by Radar's process
+seal can be compared with its digest here; its narrative and source contents
+are outside that coverage.

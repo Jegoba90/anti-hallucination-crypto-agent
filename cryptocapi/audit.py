@@ -34,19 +34,17 @@ def explain_field(field_name: str) -> str:
 
 
 _SEAL_TYPE_EXPLANATIONS: dict[str, str] = {
-    # "Seals", never "certifies": a self-issued digest is verifiable, and
-    # certified would claim a third party that does not exist.
     "process_seal": (
-        "Seals the exact corrections the 4-layer pipeline applied. "
-        "Text is not reproducible (LLM is non-deterministic by design)."
+        "Hashes selected values and 4-layer pipeline metadata. "
+        "Narrative, confidence, sources, timestamps and other diagnostics are not covered."
     ),
     "output_seal": (
-        "Any change to these outputs breaks the digest. "
-        "Reproducible by re-fetching the same Binance candles."
+        "The API labels this an output seal. "
+        "This agent does not recompute its outputs or verify its coverage."
     ),
     "reproducible": (
-        "Fully reproducible — recompute from the embedded input_vector "
-        "to get the exact same hash independently."
+        "The API labels this reproducible from an input_vector. "
+        "This agent does not independently recompute that recipe."
     ),
 }
 
@@ -74,22 +72,10 @@ _CORRECTION_REASONS: dict[str, str] = {
 def split_fields(
     fields_overridden: list[str], sentiment_override: bool, filters_applied: list[str]
 ) -> tuple[list[str], list[tuple[str, str]]]:
-    """Split `fields_overridden` into fields Python *owns* and fields it *corrected*.
+    """Interpret known ownership and correction entries reported by the API.
 
-    The two are not the same thing, and lumping them together overstates the case.
-    Most entries are structural: Python writes them on every single response, so the
-    LLM never gets a say, whether or not it was about to say something wrong. The
-    conditional entries are the real catches: `sentiment` appears only when the
-    Z-Score rule overrode the LLM's verdict, `analysis.detailed_report` only when a
-    lexical filter cut text out of it, and `summary` (since `v2.4.0-radar`) only when
-    LEY 7 cut a volume claim out of the LLM's summary.
-
-    The split is derived from the trail itself (`sentiment_override` and
-    `filters_applied` are exactly the conditions that add the first two entries), so
-    this does not hardcode a copy of the engine's list. `summary` needs no condition:
-    the LLM writes it, so whenever it is listed it is a correction, never something
-    Python owns. Anything unrecognised is reported as owned, which is the
-    conservative side: it claims a guarantee, not a catch.
+    Unknown fields and conditional entries without supporting metadata remain
+    unclassified; neither is evidence that Python controls the field.
     """
     corrected: list[tuple[str, str]] = []
     if sentiment_override and "sentiment" in fields_overridden:
@@ -98,11 +84,17 @@ def split_fields(
         corrected.append(
             ("analysis.detailed_report", _CORRECTION_REASONS["analysis.detailed_report"])
         )
-    if "summary" in fields_overridden:
+    if "LEY 7 volume" in filters_applied and "summary" in fields_overridden:
         corrected.append(("summary", _CORRECTION_REASONS["summary"]))
 
-    corrected_names = {name for name, _ in corrected}
-    owned = [f for f in fields_overridden if f not in corrected_names]
+    structural_fields = {
+        "analysis.anomaly_details",
+        "analysis.confidence",
+        "analysis.sentiment_score",
+        "confidence",
+        "is_volatility_alert",
+    }
+    owned = list(dict.fromkeys(f for f in fields_overridden if f in structural_fields))
     return owned, corrected
 
 
@@ -119,34 +111,45 @@ class AuditSummary:
     fields_overridden: list[str] = field(default_factory=list)
     fields_owned: list[str] = field(default_factory=list)
     fields_corrected: list[tuple[str, str]] = field(default_factory=list)
+    fields_unclassified: list[str] = field(default_factory=list)
     sentiment_override: bool = False
 
 
 def parse_audit_trail(audit_trail: AuditTrail | None) -> AuditSummary:
-    if not audit_trail:
+    if not isinstance(audit_trail, dict) or not audit_trail:
         return AuditSummary(is_pro=False)
 
-    seal_type = audit_trail.get("seal_type", "")
-    filters_raw = audit_trail.get("filters_applied", [])
-    fields_raw = audit_trail.get("fields_overridden", [])
-    sentiment_override = audit_trail.get("sentiment_override", False)
+    def text(value: object) -> str:
+        return value if isinstance(value, str) else ""
+
+    def names(value: object) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return list(dict.fromkeys(item for item in value if isinstance(item, str) and item.strip()))
+
+    seal_type = text(audit_trail.get("seal_type"))
+    filters_raw = names(audit_trail.get("filters_applied"))
+    fields_raw = names(audit_trail.get("fields_overridden"))
+    sentiment_override = audit_trail.get("sentiment_override") is True
 
     owned, corrected = split_fields(fields_raw, sentiment_override, filters_raw)
+    classified = set(owned) | {name for name, _ in corrected}
 
     return AuditSummary(
         is_pro=True,
-        protocol_hash=audit_trail.get("protocol_hash", ""),
+        protocol_hash=text(audit_trail.get("protocol_hash")),
         # The engine's own stamp for when it computed this analysis. The renderer
         # shows it instead of the wall clock: the collector runs on a cron, so
         # "now" is the time of printing, never the age of the data.
-        calculated_at=audit_trail.get("calculated_at", ""),
+        calculated_at=text(audit_trail.get("calculated_at")),
         seal_type=seal_type,
         seal_explanation=explain_seal_type(seal_type),
-        algorithm_id=audit_trail.get("algorithm_id", ""),
-        engine_version=audit_trail.get("engine_version", ""),
+        algorithm_id=text(audit_trail.get("algorithm_id")),
+        engine_version=text(audit_trail.get("engine_version")),
         filters=[(f, explain_filter(f)) for f in filters_raw],
         fields_overridden=fields_raw,
         fields_owned=owned,
         fields_corrected=corrected,
+        fields_unclassified=[name for name in fields_raw if name not in classified],
         sentiment_override=sentiment_override,
     )

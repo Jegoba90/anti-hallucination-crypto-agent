@@ -4,6 +4,9 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+from typing import cast
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -76,6 +79,50 @@ class TestParseAuditTrail:
         summary = parse_audit_trail({})
         assert summary.is_pro is False
 
+    @pytest.mark.parametrize("value", [None, [], "invalid", True])
+    def test_non_object_trail_is_not_an_audit(self, value: object) -> None:
+        assert parse_audit_trail(cast(AuditTrail, value)).is_pro is False
+
+    def test_bad_field_types_do_not_create_filters_or_corrections(self) -> None:
+        trail = cast(
+            AuditTrail,
+            {
+                "filters_applied": "LEY 7 volume",
+                "fields_overridden": ["sentiment", "summary", "analysis.detailed_report"],
+                "sentiment_override": "false",
+                "engine_version": [],
+                "protocol_hash": 7,
+            },
+        )
+        summary = parse_audit_trail(trail)
+
+        assert summary.filters == []
+        assert summary.fields_corrected == []
+        assert summary.fields_owned == []
+        assert summary.fields_unclassified == ["sentiment", "summary", "analysis.detailed_report"]
+        assert summary.sentiment_override is False
+        assert summary.engine_version == ""
+        assert summary.protocol_hash == ""
+
+    def test_unknown_override_is_reported_without_inventing_ownership(self) -> None:
+        summary = parse_audit_trail({"fields_overridden": ["some.future.field"]})
+
+        assert summary.fields_owned == []
+        assert summary.fields_corrected == []
+        assert summary.fields_unclassified == ["some.future.field"]
+
+    def test_duplicate_entries_do_not_inflate_counts(self) -> None:
+        summary = parse_audit_trail(
+            {
+                "fields_overridden": ["confidence", "confidence", "summary", "summary"],
+                "filters_applied": ["LEY 7 volume", "LEY 7 volume"],
+            }
+        )
+
+        assert summary.fields_owned == ["confidence"]
+        assert [name for name, _ in summary.fields_corrected] == ["summary"]
+        assert len(summary.filters) == 1
+
 
 class TestSplitFields:
     """A guarantee and a catch are different claims. The audit must not conflate them."""
@@ -129,17 +176,37 @@ class TestSplitFields:
         trail = fixture["data"]["math_diagnostics"]["audit_trail"]
         summary = parse_audit_trail(trail)
 
-        assert sorted(summary.fields_owned + [n for n, _ in summary.fields_corrected]) == sorted(
-            trail["fields_overridden"]
-        )
+        assert sorted(
+            summary.fields_owned
+            + [n for n, _ in summary.fields_corrected]
+            + summary.fields_unclassified
+        ) == sorted(trail["fields_overridden"])
         assert not set(summary.fields_owned) & {n for n, _ in summary.fields_corrected}
 
-    def test_unknown_field_is_reported_as_owned_not_as_a_catch(self) -> None:
+    def test_unknown_field_has_no_inferred_ownership_or_correction(self) -> None:
         owned, corrected = split_fields(
             ["some.future.field"], sentiment_override=False, filters_applied=[]
         )
 
-        assert owned == ["some.future.field"]
+        assert owned == []
+        assert corrected == []
+
+    def test_conditional_fields_without_supporting_metadata_are_unclassified(self) -> None:
+        owned, corrected = split_fields(
+            ["sentiment", "analysis.detailed_report", "summary"],
+            sentiment_override=False,
+            filters_applied=[],
+        )
+
+        assert owned == []
+        assert corrected == []
+
+    def test_summary_volume_correction_requires_a_volume_filter(self) -> None:
+        owned, corrected = split_fields(
+            ["summary"], sentiment_override=False, filters_applied=["certainty inflation"]
+        )
+
+        assert owned == []
         assert corrected == []
 
 

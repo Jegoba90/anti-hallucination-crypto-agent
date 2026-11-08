@@ -8,6 +8,7 @@ tests drive the real Typer app with a fake client, and with a sleep that ends
 the otherwise endless loop.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -177,3 +178,108 @@ class TestBatchRestriction:
         assert result.exit_code == 1
         assert "DEMO KEY" in out
         assert "QUANT ENGINES" not in out
+
+
+def _sealed_insight() -> dict:
+    capture = Path(__file__).parent / "fixtures" / "readme_demo_bitcoin_2026-10-17.json"
+    return json.loads(capture.read_text(encoding="utf-8"))["data"]
+
+
+class TestIntegrityChecksApplyToEveryOutput:
+    def test_json_keeps_the_payload_but_exits_nonzero_on_mismatch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data = _sealed_insight()
+        data["sentiment"] = "bullish"
+
+        result, _, _ = _invoke(
+            monkeypatch, _FakeClient(data), ["coin", "bitcoin", "--json"]
+        )
+
+        assert result.exit_code == 1
+        assert json.loads(result.output) == data
+
+    def test_json_with_a_matching_seal_exits_zero(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data = _sealed_insight()
+
+        result, _, _ = _invoke(
+            monkeypatch, _FakeClient(data), ["coin", "bitcoin", "--json"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == data
+
+    def test_a_mismatched_poll_never_changes_the_alert_baseline(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        changed = _sealed_insight()
+        changed["sentiment"] = "bullish"
+        client = _FakeClient(_sealed_insight(), changed, _sealed_insight())
+
+        _, out, _ = _invoke(
+            monkeypatch, client, ["coin", "bitcoin", "--watch"], polls=3
+        )
+
+        assert client.calls == 3
+        assert "SEAL DOES NOT MATCH" in out
+        assert "SENTIMENT CHANGED" not in out
+
+    def test_nonfinite_json_is_an_error_instead_of_invalid_json(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data = _sealed_insight()
+        data["confidence"]["score"] = float("nan")
+
+        result, _, _ = _invoke(
+            monkeypatch, _FakeClient(data), ["coin", "bitcoin", "--json"]
+        )
+
+        assert result.exit_code == 1
+        assert "error" in json.loads(result.output)
+
+
+class TestRequiredSeal:
+    @pytest.mark.parametrize("extra", [[], ["--json"]])
+    @pytest.mark.parametrize("data", [None, _insight("neutral")])
+    def test_absent_seals_fail_when_required(
+        self, monkeypatch: pytest.MonkeyPatch, extra: list[str], data: object
+    ) -> None:
+        result, _, _ = _invoke(
+            monkeypatch,
+            _FakeClient(data),
+            ["coin", "bitcoin", "--require-verified-seal", *extra],
+        )
+
+        assert result.exit_code == 1
+        if extra:
+            assert json.loads(result.output) == data
+
+    @pytest.mark.parametrize("extra", [[], ["--json"]])
+    def test_supported_matching_seals_succeed_when_required(
+        self, monkeypatch: pytest.MonkeyPatch, extra: list[str]
+    ) -> None:
+        result, _, _ = _invoke(
+            monkeypatch,
+            _FakeClient(_sealed_insight()),
+            ["coin", "bitcoin", "--require-verified-seal", *extra],
+        )
+
+        assert result.exit_code == 0
+
+    def test_watch_rejects_unchecked_readings_without_alerting(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        client = _FakeClient(_sealed_insight(), _insight("bullish"), _sealed_insight())
+
+        _, out, _ = _invoke(
+            monkeypatch,
+            client,
+            ["coin", "bitcoin", "--watch", "--require-verified-seal"],
+            polls=3,
+        )
+
+        assert client.calls == 3
+        assert "A verified process seal is required" in out
+        assert "SENTIMENT CHANGED" not in out

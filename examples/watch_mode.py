@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv
 
 from cryptocapi.client import CryptoCapiClient, DemoCoinRestricted, resolve_api_key
+from cryptocapi.seal import SealStatus
 from display.terminal import (
     console,
     render_demo_restricted,
@@ -26,6 +27,8 @@ load_dotenv()
 
 
 async def watch(coin_id: str, interval_minutes: int) -> None:
+    if interval_minutes < 1:
+        raise ValueError("interval_minutes must be at least 1")
     client = CryptoCapiClient(api_key=resolve_api_key())
     last_sentiment: str | None = None
 
@@ -36,8 +39,10 @@ async def watch(coin_id: str, interval_minutes: int) -> None:
                 # No analysis yet: an answer, not an error. Keep waiting for one.
                 render_no_analysis(coin_id)
             else:
-                render_insight(data, coin_id)
-                current_sentiment = data.get("sentiment")
+                check = render_insight(data, coin_id)
+                current_sentiment = (
+                    None if check.status is SealStatus.MISMATCH else data.get("sentiment")
+                )
                 if last_sentiment and current_sentiment and current_sentiment != last_sentiment:
                     render_sentiment_change(last_sentiment, current_sentiment)
                 last_sentiment = current_sentiment or last_sentiment

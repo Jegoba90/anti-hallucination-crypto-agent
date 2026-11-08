@@ -46,7 +46,7 @@
     <rect x="657" y="150" width="16" height="7" rx="3.5"/>
   </g>
 
-  <!-- seal: the output ships verified -->
+  <!-- mark representing the process checksum -->
   <circle cx="706" cy="170" r="18" fill="#000000" stroke="#34d399" stroke-width="2"/>
   <path d="M698 170 l5.5 6 l10 -12" fill="none" stroke="#34d399" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
 

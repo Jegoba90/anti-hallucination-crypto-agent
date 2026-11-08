@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 from cryptocapi.client import CryptoCapiClient, resolve_api_key
 from cryptocapi.audit import parse_audit_trail
+from cryptocapi.seal import SealStatus
 from display.terminal import render_insight, render_no_analysis
 
 load_dotenv()
@@ -31,7 +32,9 @@ async def main() -> None:
         # A valid answer: no engine has analyzed the coin yet. Never fill the gap.
         render_no_analysis("bitcoin")
         return
-    render_insight(data, "bitcoin")
+    check = render_insight(data, "bitcoin")
+    if check.status is SealStatus.MISMATCH:
+        raise SystemExit(1)
 
     # Access the audit trail directly if you want to process it in code
     math = data.get("math_diagnostics")

@@ -1,6 +1,8 @@
+import math as numeric
 import re
 import sys
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from rich.console import Console
 from rich.markup import escape
@@ -56,7 +58,7 @@ _DIVIDER = "─" * 55
 
 # C0 controls except tab and newline, DEL, and the C1 range. ESC (0x1b) is the one
 # that matters most: it opens every terminal escape sequence.
-_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
 
 
 def _clean(text: str) -> str:
@@ -93,11 +95,23 @@ def _print_wrapped(prefix: str, body: str) -> None:
 
 
 def _sentiment_color(sentiment: str) -> str:
-    if "bullish" in sentiment:
+    if sentiment in ("bullish", "very_bullish"):
         return COLORS["sentiment_bullish"]
-    if "bearish" in sentiment:
+    if sentiment in ("bearish", "very_bearish"):
         return COLORS["sentiment_bearish"]
     return COLORS["sentiment_neutral"]
+
+
+def _number(value: object, decimals: int) -> str:
+    """An absent or invalid measurement is a gap, never a measured zero."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return "—"
+    try:
+        if not numeric.isfinite(value):
+            return "—"
+    except OverflowError:
+        return "—"
+    return f"{value:.{decimals}f}"
 
 
 def _utc_now() -> datetime:
@@ -122,24 +136,25 @@ def _parse_calculated_at(raw: str) -> datetime | None:
         return None
     try:
         moment = datetime.fromisoformat(raw)
-    except ValueError:
+        # A naive stamp is UTC, as documented by the API. Normalize while
+        # guarded: a valid local datetime at year 1 or 9999 can overflow when
+        # its offset is converted to UTC.
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        return moment.astimezone(timezone.utc)
+    except (TypeError, ValueError, OverflowError):
         return None
-    # A naive stamp is UTC: the API documents `calculated_at` in UTC and every
-    # response observed carries the trailing Z. Assuming local time here would
-    # silently shift the age by the reader's offset.
-    return moment if moment.tzinfo is not None else moment.replace(tzinfo=timezone.utc)
 
 
 def _format_age(computed: datetime, now: datetime) -> str:
     """Say how old the analysis is, or "" when that cannot be said honestly.
 
-    A negative age means this machine's clock trails the engine's, not that the
-    analysis came from the future, so it is omitted rather than printed as a
-    nonsense "-3 min ago".
+    A negative age can mean clock skew or a bad timestamp. Report the
+    discrepancy without choosing a cause the response cannot establish.
     """
     seconds = (now - computed).total_seconds()
     if seconds < 0:
-        return ""
+        return "timestamp ahead of local clock; freshness unknown"
     minutes = int(seconds // 60)
     if minutes < 1:
         return "just now"
@@ -179,7 +194,7 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
     asset = data.get("asset", {})
     name = asset.get("id", coin_id).capitalize()
     symbol = asset.get("symbol", "").upper()
-    sentiment = data.get("sentiment", "neutral")
+    sentiment = data.get("sentiment") or "unavailable"
     math = data.get("math_diagnostics")
     regime = (math or {}).get("market_regime", "—")
     summary = data.get("summary", "")
@@ -192,6 +207,7 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
     # has no `generated_at`, the header falls back to the trail's `calculated_at`,
     # so both readers of the audit share one parse.
     audit = parse_audit_trail(math.get("audit_trail") if math else None)
+    check = check_seal(data)
 
     # `generated_at` first: the API documents it as the age of the analysis in
     # every view. Reading only the trail's stamp left the Pulse view, which has
@@ -200,7 +216,10 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
 
     # ── Header ──────────────────────────────────────────────
     header = Text()
-    header.append("  CRYPTOCAPI RADAR — ", style=COLORS["header"])
+    engine_name = {"radar": "RADAR", "quant_plus": "QUANT PLUS"}.get(
+        data.get("engine_used", ""), "INSIGHT"
+    )
+    header.append(f"  CRYPTOCAPI {engine_name} — ", style=COLORS["header"])
     header.append(_clean(f"{name} ({symbol})"), style=COLORS["coin_name"])
     header.append(f"\n  {_timestamp_line(stamp)}", style=COLORS["muted"])
 
@@ -208,6 +227,12 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(header)
     console.print(_DIVIDER, style=COLORS["divider"])
+    if check.status is SealStatus.MISMATCH:
+        _print_wrapped(
+            "  ",
+            f"[{COLORS['seal_bad']}]SEAL DOES NOT MATCH: response integrity failed; "
+            f"values below are untrusted. Narrative withheld.[/]",
+        )
 
     # ── Metrics ──────────────────────────────────────────────
     regime_icon = REGIME_ICONS.get(regime, "📊")
@@ -222,22 +247,29 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
     console.print(f"  {sentiment_icon} SENTIMENT:       [{s_color}]{_safe(sentiment)}[/]")
 
     if confidence:
-        score = confidence.get("score", 0.0)
+        score = _number(confidence.get("score"), 2)
         label = confidence.get("label", "—")
         c_color = CONFIDENCE_COLORS.get(label, "white")
-        console.print(f"  🎯 CONFIDENCE:      [{c_color}]{_safe(label)} ({score:.2f})[/]")
+        console.print(f"  🎯 CONFIDENCE:      [{c_color}]{_safe(label)} ({score})[/]")
 
     if math:
+        quality = math.get("data_quality")
+        if quality:
+            quality_color = COLORS["warning"] if quality != "OPTIMAL" else COLORS["muted"]
+            console.print(f"  DATA QUALITY:     [{quality_color}]{_safe(quality)}[/]")
+            for reason in math.get("data_quality_reason", []):
+                _print_wrapped("    ", f"[{quality_color}]{_safe(reason)}[/]")
         z = math.get("z_score")
         if z is not None:
             # The engine already ships the verdict, computed against its dynamic
             # z_score_threshold. The display must never re-derive it.
-            anomaly = (
-                "⚠️  ANOMALY DETECTED"
-                if data.get("statistical_anomaly_detected", False)
-                else "no anomaly"
-            )
-            console.print(f"  🔺 Z-SCORE:         [{COLORS['muted']}]{z:.3f} ({anomaly})[/]")
+            verdict = data.get("statistical_anomaly_detected")
+            anomaly = "anomaly verdict unavailable"
+            if verdict is True:
+                anomaly = "⚠️  ANOMALY DETECTED (API verdict)"
+            elif verdict is False:
+                anomaly = "no anomaly (API verdict)"
+            console.print(f"  🔺 Z-SCORE:         [{COLORS['muted']}]{_number(z, 3)} ({anomaly})[/]")
 
         bandwidth = math.get("bollinger_bandwidth")
         if bandwidth is not None:
@@ -246,7 +278,7 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
             # or compressing is a day-over-day change the engine computes and the
             # response does not carry, so the screen does not claim it either.
             console.print(
-                f"  📏 BANDWIDTH:       [{COLORS['muted']}]{bandwidth:.4f} "
+                f"  📏 BANDWIDTH:       [{COLORS['muted']}]{_number(bandwidth, 4)} "
                 f"(band width / 20-period mean)[/]"
             )
 
@@ -254,11 +286,11 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
         console.print("\n  [bold red]⚡ VOLATILITY ALERT[/bold red]")
 
     # ── Summary / Report ─────────────────────────────────────
-    if report:
+    if check.status is not SealStatus.MISMATCH and report:
         console.print("\n  [bold]ANALYSIS:[/bold]")
         for line in report.strip().split("\n"):
             _print_wrapped("   ", _safe(line))
-    elif summary:
+    elif check.status is not SealStatus.MISMATCH and summary:
         console.print("\n  [bold]SUMMARY:[/bold]")
         _print_wrapped("   ", _safe(summary))
 
@@ -272,7 +304,6 @@ def render_insight(data: InsightData, coin_id: str) -> SealCheck:
         _render_pulse_view_banner()
         return SealCheck(SealStatus.UNCHECKED, "this response carries no seal")
 
-    check = check_seal(data)
     _render_audit(audit, check)
     return check
 
@@ -292,15 +323,15 @@ def _render_sources(analysis: Analysis) -> None:
         console.print()
         _print_wrapped(
             "  ",
-            f"[{COLORS['warning']}]⚠  SOURCES VERIFIED (0): "
-            f"the narrative above is not anchored to any article[/]",
+            f"[{COLORS['warning']}]⚠  SOURCES REPORTED BY API (0): "
+            f"no article references were included for this narrative[/]",
         )
         return
 
-    heading = f"  SOURCES VERIFIED ({len(sources)})"
+    heading = f"SOURCES REPORTED BY API ({len(sources)})"
     if window:
         heading += f", window {window}"
-    console.print(f"\n  [bold]{heading.strip()}:[/bold]")
+    console.print(f"\n  [bold]{_safe(heading)}:[/bold]")
 
     for source in sources:
         tier = source.get("credibility", "—")
@@ -318,14 +349,30 @@ def _render_sources(analysis: Analysis) -> None:
             line = Text("             ")
             line.append(url, style=_url_style(url))
             console.print(line, soft_wrap=True)
+    console.print()
+    _print_wrapped(
+        "  ",
+        f"[{COLORS['muted']}]Article contents and narrative claims were not "
+        f"independently verified by this client.[/]",
+    )
 
 
 def _url_style(url: str) -> Style:
     muted = Style.parse(COLORS["muted"])
     # Only web addresses become links: the string comes from the API, and a
     # terminal follows whatever scheme a link hands it.
-    if url.startswith(("https://", "http://")):
-        return muted + Style(link=url)
+    try:
+        parts = urlsplit(url)
+        if (
+            parts.scheme in ("https", "http")
+            and parts.hostname
+            and not parts.username
+            and not parts.password
+            and not any(char.isspace() for char in url)
+        ):
+            return muted + Style(link=url)
+    except ValueError:
+        pass
     return muted
 
 
@@ -351,13 +398,14 @@ def _render_audit(audit: AuditSummary, check: SealCheck) -> None:
     else:
         _print_wrapped(
             "  ",
-            f"[{COLORS['muted']}]No filters fired: the LLM's output was consistent with the math[/]",
+            f"[{COLORS['muted']}]No filters reported. This does not establish "
+            f"that the narrative is factually correct.[/]",
         )
 
     if audit.fields_corrected:
         console.print()
         console.print(
-            f"  [bold]Corrections applied to the LLM's output ({len(audit.fields_corrected)}):[/bold]"
+            f"  [bold]Corrections reported by API ({len(audit.fields_corrected)}):[/bold]"
         )
         for field_name, reason in audit.fields_corrected:
             console.print(f"    ✏️  [{COLORS['warning']}]{_safe(field_name)}[/]")
@@ -365,7 +413,7 @@ def _render_audit(audit: AuditSummary, check: SealCheck) -> None:
 
     if audit.fields_owned:
         console.print()
-        console.print(f"  [bold]Fields Python owns, never the LLM ({len(audit.fields_owned)}):[/bold]")
+        console.print(f"  [bold]Python-owned fields reported by API ({len(audit.fields_owned)}):[/bold]")
         for field_name in audit.fields_owned:
             console.print(f"    🔒  [{COLORS['field_overridden']}]{_safe(field_name)}[/]")
             explanation = explain_field(field_name)
@@ -374,8 +422,18 @@ def _render_audit(audit: AuditSummary, check: SealCheck) -> None:
         console.print()
         _print_wrapped(
             "  ",
-            f"[{COLORS['muted']}]The math engine writes these on every response, "
-            f"whatever the LLM said.[/]",
+            f"[{COLORS['muted']}]Ownership is reported by the API; this client "
+            f"does not execute the engine's calculations.[/]",
+        )
+
+    if audit.fields_unclassified:
+        console.print()
+        console.print("  [bold]Other overrides reported by API:[/bold]")
+        for field_name in audit.fields_unclassified:
+            _print_wrapped("    ", _safe(field_name))
+        _print_wrapped(
+            "    ",
+            f"[{COLORS['muted']}]This client has no confirmed interpretation for these entries.[/]",
         )
 
     if audit.protocol_hash:
@@ -390,11 +448,11 @@ def _render_audit(audit: AuditSummary, check: SealCheck) -> None:
     # "certified" either: the seal is self-issued, so no third party stands
     # behind it.
     if check.status is SealStatus.VERIFIED:
-        console.print(f"  [{COLORS['seal_ok']}]✅ Math Override applied · seal verified[/]")
+        console.print(f"  [{COLORS['seal_ok']}]✅ Process seal verified · covered fields match[/]")
     elif check.status is SealStatus.MISMATCH:
         console.print(f"  [{COLORS['seal_bad']}]❌ SEAL DOES NOT MATCH · do not trust this response[/]")
     else:
-        console.print(f"  [{COLORS['warning']}]⚠  Math Override applied · seal not checked[/]")
+        console.print(f"  [{COLORS['warning']}]⚠  seal not checked[/]")
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
 
@@ -405,8 +463,13 @@ def _render_seal_check(check: SealCheck) -> None:
         _print_wrapped(
             "    ",
             f"[{COLORS['seal_ok']}]✓ recomputed here from this response: it matches[/] "
-            f"[{COLORS['muted']}](the response is the one that was sealed; an unkeyed "
+            f"[{COLORS['muted']}](only covered fields match; an unkeyed "
             f"hash cannot say who sealed it)[/]",
+        )
+        _print_wrapped(
+            "    ",
+            f"[{COLORS['muted']}]The seal does not cover the narrative, confidence, bandwidth, "
+            f"sources, or timestamps. It does not verify market calculations.[/]",
         )
     elif check.status is SealStatus.MISMATCH:
         _print_wrapped(
@@ -490,13 +553,10 @@ def render_pro_required(message: str) -> None:
 
 
 def _render_pulse_view_banner() -> None:
-    console.print(f"  [{COLORS['free_banner']}]⚠  PULSE VIEW (free / no key)[/]")
+    console.print(f"  [{COLORS['free_banner']}]⚠  NO AUDIT TRAIL[/]")
     console.print()
-    console.print(f"  [{COLORS['muted']}]audit_trail not available on the free tier.[/]")
-    console.print(f"  [{COLORS['muted']}]Upgrade to PRO to see the anti-hallucination[/]")
-    console.print(f"  [{COLORS['muted']}]proof for every insight.[/]")
-    console.print()
-    console.print(f"  [{COLORS['pro_banner']}]→ Free 14-day trial: https://cryptocapi.com[/]")
+    console.print(f"  [{COLORS['muted']}]This response carries no audit trail.[/]")
+    console.print(f"  [{COLORS['muted']}]Its integrity and calculations were not verified here.[/]")
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print()
 
@@ -512,14 +572,19 @@ def _asset_label(asset: QuantAsset | None) -> str:
 def _axis(value: float | None) -> str:
     # null means the engine had no threshold or sample for this asset: show the
     # gap rather than a 0.00 that would read as a measurement.
-    return f"{value:.2f}" if value is not None else "—"
+    shown = _number(value, 2)
+    # Two decimal places must not promote a reading below the boundary into a
+    # displayed trigger, or a partial sample into displayed full evidence.
+    if shown == "1.00" and value is not None and value != 1:
+        return f"{'<' if value < 1 else '>'}1.00"
+    return shown
 
 
 def render_scan(results: list[ScanResult], strategy: str) -> None:
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📡 MARKET SCAN — strategy: [{COLORS['coin_name']}]{_safe(strategy)}[/]")
-    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
+    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (API signals; calculations not recomputed here)[/]")
     # "Rendered": each row carries its own `generated_at` and they differ, so no
     # single stamp dates the table. This is the clock of the run, not the age of
     # the signals. Say which one it is.
@@ -566,6 +631,15 @@ def render_scan(results: list[ScanResult], strategy: str) -> None:
     console.print(
         f"  [{COLORS['muted']}]Evid.: sample size behind that reading (1.00 = full)[/]"
     )
+    if results:
+        console.print()
+        console.print("  [bold]Signal timestamps reported by API:[/bold]")
+        for r in results:
+            _print_wrapped(
+                "  ",
+                f"{_safe(_asset_label(r.get('asset')))}: "
+                f"[{COLORS['muted']}]{_timestamp_line(r.get('generated_at') or '')}[/]",
+            )
     console.print()
 
 
@@ -573,7 +647,7 @@ def render_batch(results: list[SignalResult]) -> None:
     console.print()
     console.print(_DIVIDER, style=COLORS["divider"])
     console.print(f"  📦 BATCH ANALYSIS — {len(results)} assets")
-    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (100% Python, no LLM in this path)[/]")
+    console.print(f"  [{COLORS['muted']}]Engine: Quant Plus (API signals; calculations not recomputed here)[/]")
     # "Rendered": each row carries its own `generated_at` and they differ, so no
     # single stamp dates the batch. This is the clock of the run, not the age of
     # the signals. Say which one it is.
@@ -585,20 +659,25 @@ def render_batch(results: list[SignalResult]) -> None:
         console.print()
 
         # A symbol the engine has no signal for comes back with every field null.
-        if not r.get("available", True):
+        if r.get("available") is not True:
+            availability = (
+                "no pre-computed signal for this asset"
+                if r.get("available") is False
+                else "signal availability not reported"
+            )
             _print_wrapped(
                 "  ",
                 f"[{COLORS['coin_name']}]{label_text}[/]  "
-                f"[{COLORS['muted']}]no pre-computed signal for this asset[/]",
+                f"[{COLORS['muted']}]{availability}[/]",
             )
             continue
 
         signal = r.get("signal") or "—"
-        sentiment = r.get("sentiment") or "neutral"
+        sentiment = r.get("sentiment") or "unavailable"
         regime = r.get("market_regime") or "—"
         confidence = r.get("confidence")
         label = confidence.get("label", "—") if confidence else "—"
-        score = confidence.get("score", 0.0) if confidence else 0.0
+        score = _number(confidence.get("score") if confidence else None, 2)
         summary = r.get("summary") or ""
         s_color = _sentiment_color(sentiment)
         c_color = CONFIDENCE_COLORS.get(label, "white")
@@ -610,8 +689,12 @@ def render_batch(results: list[SignalResult]) -> None:
             f"[{COLORS['coin_name']}]{label_text}[/]  "
             f"[{sig_color}]{_safe(signal)}[/]  "
             f"{sentiment_icon} [{s_color}]{_safe(sentiment)}[/]  "
-            f"[{c_color}]{_safe(label)} ({score:.2f})[/]  "
+            f"[{c_color}]{_safe(label)} ({score})[/]  "
             f"[{COLORS['regime']}]{_safe(regime)}[/]",
+        )
+        _print_wrapped(
+            "  ",
+            f"[{COLORS['muted']}]{_timestamp_line(r.get('generated_at') or '')}[/]",
         )
         if summary:
             _print_wrapped("  ", f"[{COLORS['muted']}]{_safe(summary)}[/]")

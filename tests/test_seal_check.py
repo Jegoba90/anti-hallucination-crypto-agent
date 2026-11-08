@@ -10,6 +10,7 @@ never calls a seal wrong when the agent is the one that fell behind.
 import json
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 from typer.testing import CliRunner
@@ -19,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import agent
 from cryptocapi import SealStatus, check_seal
 from cryptocapi.models import InsightData
-from cryptocapi.seal import _digest
+from cryptocapi.seal import _canonical, _digest
 from display.terminal import console, render_insight
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -91,6 +92,25 @@ class TestAChangedResponseIsCaught:
 
         assert check_seal(data).status is SealStatus.MISMATCH
 
+    @pytest.mark.parametrize(
+        "change",
+        [
+            lambda d: d.__setitem__("summary", "An unsupported market prediction"),
+            lambda d: d["analysis"].__setitem__("detailed_report", "Fabricated narrative"),
+            lambda d: d["confidence"].__setitem__("score", 0.99),
+            lambda d: d["math_diagnostics"].__setitem__("bollinger_bandwidth", 99.0),
+            lambda d: d["analysis"].__setitem__("sources_verified", []),
+            lambda d: d.__setitem__("generated_at", "2099-01-01T00:00:00Z"),
+        ],
+        ids=["summary", "report", "confidence", "bandwidth", "sources", "timestamp"],
+    )
+    def test_unsealed_values_are_outside_the_checks_scope(self, change) -> None:
+        data = _data(_LATEST)
+        change(data)
+
+        # This match must never be presented as validation of these values.
+        assert check_seal(data).status is SealStatus.VERIFIED
+
 
 class TestTheAgentNeverAccusesWhatItCannotCheck:
     def test_a_response_without_a_seal_is_unchecked(self) -> None:
@@ -113,10 +133,10 @@ class TestTheAgentNeverAccusesWhatItCannotCheck:
         assert check.status is SealStatus.UNCHECKED
         assert "z_score" in check.reason
 
-    def test_a_newer_engine_that_kept_the_rule_still_verifies(self) -> None:
+    def test_a_newer_engine_is_unchecked_even_if_the_old_eight_fields_match(self) -> None:
         data = _resealed_as("v2.5.0-radar", _data(_LATEST))
 
-        assert check_seal(data).status is SealStatus.VERIFIED
+        assert check_seal(data).status is SealStatus.UNCHECKED
 
     def test_a_newer_engine_that_changed_the_rule_is_unchecked_not_wrong(self) -> None:
         """What happened on 2026-09-01: calling that a mismatch would accuse the API."""
@@ -126,6 +146,97 @@ class TestTheAgentNeverAccusesWhatItCannotCheck:
         check = check_seal(data)
         assert check.status is SealStatus.UNCHECKED
         assert "v2.5.0-radar" in check.reason
+
+
+class TestMalformedDataCannotEarnAVerifiedSeal:
+    @pytest.mark.parametrize("value", [None, [], "invalid", True])
+    def test_non_object_response_is_unchecked(self, value: object) -> None:
+        assert check_seal(cast(InsightData, value)).status is SealStatus.UNCHECKED
+
+    @pytest.mark.parametrize("value", [None, [], "invalid", 7])
+    @pytest.mark.parametrize("field", ["math_diagnostics", "audit_trail"])
+    def test_invalid_nesting_is_unchecked(self, field: str, value: object) -> None:
+        data = _data(_LATEST)
+        target = cast(
+            dict[str, object], data if field == "math_diagnostics" else data["math_diagnostics"]
+        )
+        target[field] = value
+
+        assert check_seal(data).status is SealStatus.UNCHECKED
+
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf"), 10**1000])
+    def test_invalid_numeric_values_are_unchecked(self, value: object) -> None:
+        data = _data(_LATEST)
+        cast(dict[str, object], data["math_diagnostics"])["z_score"] = value
+
+        assert check_seal(data).status is SealStatus.UNCHECKED
+
+    @pytest.mark.parametrize("value", ["-0.427800", True, False, None, []])
+    def test_wrong_numeric_types_are_unchecked_even_if_resealed(self, value: object) -> None:
+        data = _data(_LATEST)
+        cast(dict[str, object], data["math_diagnostics"])["z_score"] = value
+        _resealed_as("v2.4.0-radar", data)
+
+        assert check_seal(data).status is SealStatus.UNCHECKED
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("engine_version", []),
+            ("algorithm_id", ""),
+            ("sentiment_override", "false"),
+            ("sentiment_override", 0),
+            ("filters_applied", "LEY 7 volume"),
+            ("filters_applied", [False]),
+            ("fields_overridden", None),
+            ("fields_overridden", ["confidence", {}]),
+        ],
+    )
+    def test_invalid_metadata_is_unchecked(self, field: str, value: object) -> None:
+        data = _data(_LATEST)
+        cast(dict[str, object], data["math_diagnostics"]["audit_trail"])[field] = value
+
+        assert check_seal(data).status is SealStatus.UNCHECKED
+
+    @pytest.mark.parametrize("digest", [None, "", "0x1234", "0x" + "zz" * 32, []])
+    def test_a_missing_or_invalid_hash_is_unchecked(self, digest: object) -> None:
+        data = _data(_LATEST)
+        cast(dict[str, object], data["math_diagnostics"]["audit_trail"])["protocol_hash"] = digest
+
+        assert check_seal(data).status is SealStatus.UNCHECKED
+
+    def test_an_unsupported_algorithm_is_unchecked_even_if_resealed(self) -> None:
+        data = _data(_LATEST)
+        data["math_diagnostics"]["audit_trail"]["algorithm_id"] = "Different pipeline"
+        _resealed_as("v2.4.0-radar", data)
+
+        assert check_seal(data).status is SealStatus.UNCHECKED
+
+    def test_another_engine_cannot_borrow_a_radar_seal(self) -> None:
+        data = _data(_LATEST)
+        data["engine_used"] = "quant_plus"
+
+        assert check_seal(data).status is SealStatus.UNCHECKED
+
+
+class TestNumericSerialization:
+    def test_negative_zero_uses_the_documented_positive_zero_form(self) -> None:
+        assert _canonical(-0.0) == "0.000000"
+        assert _canonical(0.0) == "0.000000"
+
+    def test_booleans_are_not_serialized_as_numbers(self) -> None:
+        assert _canonical(True) is True
+        assert _canonical(False) is False
+
+    @pytest.mark.parametrize("rule", ["plain", "fixed6"])
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+    def test_non_json_numbers_cannot_be_hashed(self, rule: str, value: float) -> None:
+        with pytest.raises(ValueError):
+            _digest({"z_score": value}, rule)
+
+    def test_an_unknown_rule_does_not_fall_back_to_plain_serialization(self) -> None:
+        with pytest.raises(ValueError, match="unknown seal rule"):
+            _digest({"z_score": 0.5}, "future_rule")
 
 
 class TestTheScreenSaysWhatWasFound:

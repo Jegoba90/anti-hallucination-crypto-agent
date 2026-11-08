@@ -79,8 +79,8 @@ class TestGuaranteeAndCatchAreSeparate:
         """The production response: one filter fired, the report was rewritten."""
         out = _render(_load_fixture())
 
-        assert "Corrections applied to the LLM's output (1)" in out
-        assert "Fields Python owns, never the LLM (5)" in out
+        assert "Corrections reported by API (1)" in out
+        assert "Python-owned fields reported by API (5)" in out
 
     def test_every_conditional_entry_is_a_correction(self) -> None:
         """sentiment, the report and, since v2.4.0-radar, the summary."""
@@ -101,8 +101,8 @@ class TestGuaranteeAndCatchAreSeparate:
             )
         )
 
-        assert "Corrections applied to the LLM's output (3)" in out
-        assert "Fields Python owns, never the LLM (5)" in out
+        assert "Corrections reported by API (3)" in out
+        assert "Python-owned fields reported by API (5)" in out
 
     def test_a_quiet_response_shows_no_corrections_section(self) -> None:
         data = _load_fixture()
@@ -119,5 +119,32 @@ class TestGuaranteeAndCatchAreSeparate:
 
         out = _render(data)
 
-        assert "Corrections applied" not in out
-        assert "Fields Python owns, never the LLM (5)" in out
+        assert "Corrections reported" not in out
+        assert "Python-owned fields reported by API (5)" in out
+        assert "consistent with the math" not in out
+        assert "does not establish" in out
+
+    def test_unknown_overrides_are_not_presented_as_confirmed_python_ownership(self) -> None:
+        out = _render(_with_trail(fields_overridden=["future_field"]))
+
+        assert "Other overrides reported by API" in out
+        assert "future_field" in out
+        assert "Python-owned fields" not in out
+
+    def test_a_matching_hash_does_not_claim_the_narrative_was_verified(self) -> None:
+        out = _render(_load_fixture())
+
+        assert "covered fields match" in out
+        assert "does not cover the narrative" in out
+        assert "Math Override applied" not in out
+
+    def test_a_bad_seal_is_flagged_before_metrics_and_withholds_narrative(self) -> None:
+        data = _load_fixture()
+        data["sentiment"] = "bearish"
+        data["analysis"]["detailed_report"] = "Untrusted narrative marker"
+
+        out = _render(data)
+
+        assert out.index("SEAL DOES NOT MATCH") < out.index("MARKET REGIME")
+        assert "Narrative withheld" in out
+        assert "Untrusted narrative marker" not in out

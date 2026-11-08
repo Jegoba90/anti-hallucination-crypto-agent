@@ -72,6 +72,31 @@ class TestBatch:
 
         assert "[bold red] breakout" in _render_batch([row])
 
+    def test_missing_sentiment_and_confidence_are_not_fabricated(self) -> None:
+        row: SignalResult = {"asset": {"id": "bitcoin", "symbol": "btc"}, "available": True}
+
+        out = _render_batch([row])
+
+        assert "unavailable" in out
+        assert "neutral" not in out
+        assert "0.00" not in out
+
+    def test_a_missing_availability_flag_does_not_authorize_displaying_a_signal(self) -> None:
+        row: SignalResult = {"asset": {"id": "bitcoin", "symbol": "btc"}, "signal": "BUY"}
+
+        out = _render_batch([row])
+
+        assert "signal availability not reported" in out
+        assert "BUY" not in out
+
+    def test_the_signal_timestamp_is_visible_in_addition_to_the_render_clock(self) -> None:
+        row = _rows("batch_btc_eth.json")[0]
+        row["generated_at"] = "2020-01-02T03:04:05Z"
+
+        out = _render_batch([row])
+
+        assert "Analysis computed 2020-01-02 03:04:05 UTC" in out
+
 
 class TestScan:
     def test_each_row_is_named_from_its_asset(self) -> None:
@@ -96,3 +121,20 @@ class TestScan:
 
         assert "0.00" not in out
         assert "—" in out
+
+    def test_rounding_does_not_promote_near_threshold_values_to_triggers_or_full_evidence(self) -> None:
+        row = _rows("market_scan_openapi_example.json")[0]
+        row["threshold_proximity"] = 0.9999
+        row["evidence_weight"] = 0.9999
+
+        out = _render_scan([row])
+
+        assert out.count("<1.00") == 2
+
+    def test_row_timestamps_are_not_hidden_behind_the_render_clock(self) -> None:
+        row = _rows("market_scan_openapi_example.json")[0]
+        row["generated_at"] = "2020-01-02T03:04:05Z"
+
+        out = _render_scan([row])
+
+        assert "Analysis computed 2020-01-02 03:04:05 UTC" in out

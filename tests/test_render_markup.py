@@ -133,3 +133,22 @@ class TestControlCharactersNeverReachTheTerminal:
         row = {"asset": {"id": "bitcoin", "symbol": "btc"}, "available": True, "summary": _INJECTED}
 
         _assert_nothing_injected(_on_a_terminal(monkeypatch, lambda t: t.render_batch([row])))
+
+    def test_a_source_window(self, monkeypatch) -> None:
+        data = _insight(
+            analysis={
+                "sources_window": _INJECTED,
+                "sources_verified": [{"title": "Article", "url": "https://example.org"}],
+            }
+        )
+
+        _assert_nothing_injected(_on_a_terminal(monkeypatch, lambda t: t.render_insight(data, "bitcoin")))
+
+    def test_bidirectional_controls_cannot_disguise_source_urls(self) -> None:
+        url = "https://example.org/\u202emalicious\u202c"
+        data = _insight(analysis={"sources_verified": [{"title": "Article", "url": url}]})
+
+        out = _render(data)
+
+        assert "\u202e" not in out
+        assert "\u202c" not in out

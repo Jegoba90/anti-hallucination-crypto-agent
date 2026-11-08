@@ -16,6 +16,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cryptocapi.models import InsightData
@@ -96,7 +98,7 @@ class TestHeaderNeverInventsATime:
         out = _render(data)
 
         assert "no analysis timestamp" in out
-        assert "PULSE VIEW" in out
+        assert "NO AUDIT TRAIL" in out
 
 
 class TestGeneratedAtIsTheAnalysisAge:
@@ -127,17 +129,27 @@ class TestGeneratedAtIsTheAnalysisAge:
 
         assert "no analysis timestamp" in out
 
-    def test_a_clock_ahead_of_ours_does_not_print_a_negative_age(self) -> None:
-        """Engine clock ahead of this machine's is skew, not a future analysis."""
+    @pytest.mark.parametrize(
+        "stamp", ["0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"]
+    )
+    def test_utc_normalization_overflow_is_an_unreadable_timestamp(self, stamp: str) -> None:
+        out = _render(_with_calculated_at(stamp))
+
+        assert "no analysis timestamp" in out
+        assert "Analysis computed" not in out
+
+    def test_an_offset_timestamp_is_normalized_to_utc_before_display(self) -> None:
+        out = _render(_with_calculated_at("2026-09-03T20:04:24.207146-03:00"))
+
+        assert "Analysis computed 2026-09-03 23:04:24 UTC" in out
+
+    def test_a_future_timestamp_reports_unknown_freshness_without_guessing_cause(self) -> None:
         moment = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
         out = _render(_with_calculated_at(moment.isoformat().replace("+00:00", "Z")))
 
         assert "Analysis computed" in out
-        # The stamp still prints; only the age is withheld, so the line carries
-        # no parenthesised suffix at all.
-        header_line = out.split("Analysis computed")[1].split("\n")[0]
-        assert "ago" not in header_line
-        assert "(" not in header_line
+        assert "timestamp ahead of local clock" in out
+        assert "freshness unknown" in out
 
     def test_naive_stamp_is_read_as_utc_not_as_local_time(self) -> None:
         out = _render(_with_calculated_at("2026-09-03T23:04:24.207146"))

@@ -37,7 +37,7 @@ class TestSourcesAreRendered:
     def test_fixture_sources_reach_the_screen(self) -> None:
         out = _render(_load_fixture())
 
-        assert "SOURCES VERIFIED (1)" in out
+        assert "SOURCES REPORTED BY API (1)" in out
         assert "window 24h" in out
         assert "Tier 2" in out
         assert "Bitcoin Miner Ditches Site for AI Deal" in out
@@ -49,8 +49,22 @@ class TestSourcesAreRendered:
 
         out = _render(data)
 
-        assert "SOURCES VERIFIED (0)" in out
-        assert "not anchored" in out
+        assert "SOURCES REPORTED BY API (0)" in out
+        assert "no article references were included" in out
+
+    def test_the_client_does_not_claim_independent_source_verification(self) -> None:
+        out = _render(_load_fixture())
+
+        assert "SOURCES VERIFIED" not in out
+        assert "not independently verified by this client" in " ".join(out.split())
+
+    def test_source_window_is_escaped_and_cannot_inject_markup(self) -> None:
+        data = _load_fixture()
+        data["analysis"]["sources_window"] = "24h [/] [bold]"
+
+        out = _render(data)
+
+        assert "24h [/] [bold]" in out
 
 
 # Live on 2026-10-17: 129 characters, longer than a terminal line.

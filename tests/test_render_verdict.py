@@ -48,8 +48,66 @@ class TestAnomalyVerdictComesFromTheEngine:
         out = _render(_insight(z_score=3.8, anomaly=True))
         assert "ANOMALY DETECTED" in out
 
-    def test_missing_verdict_defaults_to_no_anomaly(self) -> None:
+    def test_missing_verdict_is_unavailable_instead_of_no_anomaly(self) -> None:
         data = _insight(z_score=2.0, anomaly=False)
         del data["statistical_anomaly_detected"]
         out = _render(data)
-        assert "no anomaly" in out
+        assert "anomaly verdict unavailable" in out
+        assert "no anomaly" not in out
+
+    def test_missing_sentiment_is_not_fabricated_as_neutral(self) -> None:
+        data = _insight(z_score=2.0, anomaly=False)
+        del data["sentiment"]
+
+        out = _render(data)
+
+        line = next(line for line in out.splitlines() if "SENTIMENT:" in line)
+        assert "unavailable" in line
+        assert "neutral" not in line
+
+    def test_a_missing_confidence_score_is_not_fabricated_as_zero(self) -> None:
+        data = _insight(z_score=2.0, anomaly=False)
+        data["confidence"] = {"label": "HIGH"}  # type: ignore[typeddict-item]
+
+        out = _render(data)
+
+        assert "HIGH (—)" in out
+        assert "0.00" not in out
+
+    def test_nonfinite_and_boolean_metrics_are_not_printed_as_measurements(self) -> None:
+        data = _insight(z_score=float("nan"), anomaly=False)
+        data["math_diagnostics"]["bollinger_bandwidth"] = float("inf")
+        data["confidence"] = {"score": True, "label": "HIGH"}
+
+        out = _render(data)
+
+        assert "nan" not in out
+        assert "inf (band width" not in out
+        assert "HIGH (—)" in out
+
+    def test_insufficient_quality_and_its_reason_reach_the_screen(self) -> None:
+        data = _insight(z_score=2.0, anomaly=False)
+        data["math_diagnostics"]["data_quality"] = "INSUFFICIENT"
+        data["math_diagnostics"]["data_quality_reason"] = ["Too few observations"]
+
+        out = _render(data)
+
+        assert "DATA QUALITY:" in out
+        assert "INSUFFICIENT" in out
+        assert "Too few observations" in out
+
+    def test_quant_insights_are_not_mislabeled_as_radar(self) -> None:
+        data = _insight(z_score=2.0, anomaly=False)
+        data["engine_used"] = "quant_plus"
+
+        out = _render(data)
+
+        assert "CRYPTOCAPI QUANT PLUS" in out
+        assert "CRYPTOCAPI RADAR" not in out
+
+    def test_a_missing_audit_trail_does_not_infer_a_subscription_or_view(self) -> None:
+        out = _render(_insight(z_score=2.0, anomaly=False))
+
+        assert "NO AUDIT TRAIL" in out
+        assert "PULSE VIEW" not in out
+        assert "free / no key" not in out

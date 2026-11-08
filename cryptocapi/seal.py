@@ -1,18 +1,14 @@
-"""Recompute a Radar `process_seal` from the response that carries it.
+"""Compare eight Radar process-seal fields with their unkeyed SHA-256 digest.
 
-The CLI used to print the seal under a green check without ever checking it: no
-line of the agent hashed anything, only the tests and the README recipe did. So
-when the engine changed how it seals numbers (2026-09-01), the screen kept its
-check for six weeks while the recipe printed False. This is the README recipe,
-run by the agent on every response it shows.
-
-What a match proves is narrow, and the caller should say so: the response is
-internally consistent, the one that was sealed. The digest is unkeyed, so it
-says nothing about who sealed it (see "What the seal does and does not prove").
+A match checks only those fields under a known recipe. It cannot authenticate
+the issuer, validate the market inputs, or check the unsealed narrative,
+confidence, sources, timestamps and remaining diagnostics.
 """
 
 import hashlib
 import json
+import math
+import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -28,7 +24,7 @@ _RULES: dict[str, str] = {
     "v2.3.0-radar": "fixed6",
     "v2.4.0-radar": "fixed6",
 }
-_LATEST_RULE = "fixed6"
+_RADAR_ALGORITHM = "Radar 4-Layer Anti-Hallucination Pipeline"
 
 
 class SealStatus(Enum):
@@ -52,6 +48,12 @@ def _canonical(value: object) -> object:
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
+        try:
+            finite = math.isfinite(value)
+        except OverflowError as exc:
+            raise ValueError("number cannot be represented by the seal recipe") from exc
+        if not finite:
+            raise ValueError("non-finite numbers cannot be sealed")
         return format(value + 0.0, ".6f")
     if isinstance(value, list):
         return [_canonical(item) for item in value]
@@ -61,22 +63,25 @@ def _canonical(value: object) -> object:
 
 
 def _digest(payload: dict[str, object], rule: str) -> str:
+    if rule not in {"plain", "fixed6"}:
+        raise ValueError(f"unknown seal rule: {rule}")
     body = _canonical(payload) if rule == "fixed6" else payload
-    serialized = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    serialized = json.dumps(
+        body, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False
+    )
     return "0x" + hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def check_seal(data: InsightData) -> SealCheck:
-    """Recompute the seal from the eight fields it covers and compare.
-
-    MISMATCH is only ever said for an engine version whose rule is known. For a
-    newer one, agreement with the latest rule still verifies, but disagreement
-    means the rule may have changed again, so the answer is UNCHECKED: telling
-    the reader a response was tampered with, when it was the agent that fell
-    behind, would be the agent hallucinating.
-    """
+    """Compare a well-formed seal only when its algorithm and version are known."""
+    if not isinstance(data, dict):
+        return SealCheck(SealStatus.UNCHECKED, "the response is not an object")
     math = data.get("math_diagnostics")
-    trail = math.get("audit_trail") if math else None
+    if not isinstance(math, dict):
+        return SealCheck(SealStatus.UNCHECKED, "this response carries no valid math diagnostics")
+    trail = math.get("audit_trail")
+    if not isinstance(trail, dict):
+        return SealCheck(SealStatus.UNCHECKED, "this response carries no valid audit trail")
     if not math or not trail:
         return SealCheck(SealStatus.UNCHECKED, "this response carries no seal")
 
@@ -100,7 +105,33 @@ def check_seal(data: InsightData) -> SealCheck:
             SealStatus.UNCHECKED, f"the response lacks {missing.args[0]}, one of the sealed fields"
         )
 
+    for name in ("algorithm_id", "engine_version", "market_regime", "sentiment"):
+        value = payload[name]
+        if not isinstance(value, str) or not value.strip():
+            return SealCheck(SealStatus.UNCHECKED, f"sealed field {name} is not a non-empty string")
+    z_score = payload["z_score"]
+    if isinstance(z_score, bool) or not isinstance(z_score, (int, float)):
+        return SealCheck(SealStatus.UNCHECKED, "sealed field z_score is not a finite number")
+    try:
+        _canonical(z_score)
+    except ValueError:
+        return SealCheck(SealStatus.UNCHECKED, "sealed field z_score is not a finite number")
+    if not isinstance(payload["sentiment_override"], bool):
+        return SealCheck(SealStatus.UNCHECKED, "sealed field sentiment_override is not a boolean")
+    for name in ("filters_applied", "fields_overridden"):
+        value = payload[name]
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) and item.strip() for item in value
+        ):
+            return SealCheck(SealStatus.UNCHECKED, f"sealed field {name} is not a list of strings")
+
     expected = trail.get("protocol_hash", "")
+    if not isinstance(expected, str) or re.fullmatch(r"0x[0-9a-f]{64}", expected) is None:
+        return SealCheck(SealStatus.UNCHECKED, "protocol_hash is not a SHA-256 digest with 0x prefix")
+    if trail["algorithm_id"] != _RADAR_ALGORITHM:
+        return SealCheck(SealStatus.UNCHECKED, "the process-seal algorithm is not supported")
+    if data.get("engine_used", "radar") != "radar":
+        return SealCheck(SealStatus.UNCHECKED, "the response is not from the Radar engine")
     version = trail["engine_version"]
     rule = _RULES.get(version)
 
@@ -109,9 +140,7 @@ def check_seal(data: InsightData) -> SealCheck:
             return SealCheck(SealStatus.VERIFIED)
         return SealCheck(SealStatus.MISMATCH, f"recomputed with the {version} rule, the hash differs")
 
-    if _digest(payload, _LATEST_RULE) == expected:
-        return SealCheck(SealStatus.VERIFIED)
     return SealCheck(
         SealStatus.UNCHECKED,
-        f"engine {version} is newer than this agent knows, and its seal rule may have changed",
+        f"engine {version} has no supported seal recipe in this agent",
     )

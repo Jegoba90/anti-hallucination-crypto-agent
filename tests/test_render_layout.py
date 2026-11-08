@@ -61,7 +61,7 @@ class TestLongTextKeepsItsIndent:
         source = {"title": _LONG, "url": "https://example.org/a", "credibility": "Tier 1"}
         out = _render(monkeypatch, _insight(analysis={"sources_verified": [source]}))
 
-        lines = _section(out, "SOURCES VERIFIED")
+        lines = _section(out, "SOURCES REPORTED BY API")
         continuation = [line for line in lines[1:] if "https://" not in line]
         assert continuation, "the title should wrap at 60 columns"
         assert all(re.match(r" {13}\S", line) for line in continuation + lines[-1:])
